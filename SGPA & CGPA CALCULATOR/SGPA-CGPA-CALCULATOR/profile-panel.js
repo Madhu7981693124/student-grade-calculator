@@ -31,6 +31,24 @@ const FIELD_CONFIG = [
   { key: "dob", label: "Date of Birth", type: "date", required: false, placeholder: "" }
 ];
 
+const FIELD_GROUPS = [
+  {
+    title: "Identity",
+    description: "Your academic identity and regulation details.",
+    fields: ["fullName", "hallTicket", "branch", "regulation"]
+  },
+  {
+    title: "Contact",
+    description: "Personal and institutional contact information.",
+    fields: ["email", "phone", "collegeName"]
+  },
+  {
+    title: "Personal",
+    description: "Background information used for a more complete profile.",
+    fields: ["joiningYear", "gender", "dob"]
+  }
+];
+
 function normalizeProfile(rawProfile) {
   const profile = rawProfile || {};
   return {
@@ -91,28 +109,53 @@ function placeholderFor(value, fallback = "Not available") {
   return value ? value : fallback;
 }
 
+function profileCoreChanged(profile, draft) {
+  const keys = ["fullName", "email", "hallTicket", "branch", "regulation", "joiningYear", "phone", "collegeName", "gender", "dob"];
+  return keys.some(key => String(profile[key] || "") !== String(draft[key] || ""));
+}
+
+function badgeTone(completion) {
+  if (completion >= 90) return "from-emerald-400/30 to-cyan-400/20 text-emerald-100 border-emerald-300/20";
+  if (completion >= 70) return "from-sky-400/30 to-indigo-400/20 text-sky-100 border-sky-300/20";
+  if (completion >= 50) return "from-amber-400/30 to-orange-400/20 text-amber-100 border-amber-300/20";
+  return "from-rose-400/30 to-pink-400/20 text-rose-100 border-rose-300/20";
+}
+
 function LoadingSkeleton() {
   return html`
-    <section className="w-full min-h-[70vh] rounded-[32px] border border-white/10 bg-white/[0.06] p-5 shadow-[0_24px_80px_rgba(2,6,23,0.42)] backdrop-blur-2xl md:p-8 animate-pulse">
-      <div className="flex flex-col gap-6 border-b border-white/10 pb-6 md:flex-row md:items-center md:justify-between">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-          <div className="h-24 w-24 rounded-full bg-slate-700/70"></div>
+    <section className="w-full min-h-[70vh] rounded-[36px] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.18),transparent_28%),linear-gradient(180deg,rgba(6,12,24,0.94),rgba(11,23,45,0.96))] p-5 shadow-[0_24px_80px_rgba(2,6,23,0.42)] backdrop-blur-2xl md:p-8 animate-pulse">
+      <div className="flex flex-col gap-6 border-b border-white/10 pb-6 xl:flex-row xl:items-center xl:justify-between">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
+          <div className="h-28 w-28 rounded-[28px] bg-slate-700/70"></div>
           <div className="space-y-3">
-            <div className="h-6 w-48 rounded-full bg-slate-700/70"></div>
-            <div className="h-3 w-64 rounded-full bg-slate-800/70"></div>
-            <div className="h-3 w-40 rounded-full bg-slate-800/70"></div>
+            <div className="h-7 w-56 rounded-full bg-slate-700/70"></div>
+            <div className="h-3 w-72 rounded-full bg-slate-800/70"></div>
+            <div className="h-3 w-48 rounded-full bg-slate-800/70"></div>
           </div>
         </div>
-        <div className="h-11 w-36 rounded-2xl bg-slate-700/70"></div>
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          ${Array.from({ length: 4 }, (_, index) => html`<div key=${index} className="h-24 w-full rounded-[24px] bg-slate-800/60"></div>`)}
+        </div>
       </div>
-      <div className="mt-6 space-y-5">
-        <div className="h-3 w-full rounded-full bg-slate-800/70"></div>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          ${Array.from({ length: 12 }, (_, index) => html`
-            <div key=${index} className="space-y-3 rounded-[24px] border border-white/[0.08] bg-slate-950/30 p-4">
-              <div className="h-3 w-28 rounded-full bg-slate-700/70"></div>
-              <div className="h-12 rounded-2xl bg-slate-800/70"></div>
+      <div className="mt-6 grid grid-cols-1 gap-5 xl:grid-cols-[1.15fr_0.85fr]">
+        <div className="space-y-5">
+          ${Array.from({ length: 2 }, (_, groupIndex) => html`
+            <div key=${groupIndex} className="rounded-[28px] border border-white/[0.08] bg-slate-950/30 p-5">
+              <div className="mb-4 h-4 w-40 rounded-full bg-slate-700/70"></div>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                ${Array.from({ length: groupIndex === 0 ? 4 : 3 }, (_, index) => html`
+                  <div key=${index} className="space-y-3 rounded-[24px] border border-white/[0.08] bg-slate-950/30 p-4">
+                    <div className="h-3 w-28 rounded-full bg-slate-700/70"></div>
+                    <div className="h-12 rounded-2xl bg-slate-800/70"></div>
+                  </div>
+                `)}
+              </div>
             </div>
+          `)}
+        </div>
+        <div className="space-y-5">
+          ${Array.from({ length: 2 }, (_, index) => html`
+            <div key=${index} className="h-56 rounded-[28px] border border-white/[0.08] bg-slate-950/30"></div>
           `)}
         </div>
       </div>
@@ -171,6 +214,28 @@ function FieldCard({ field, value, error, isEditing, onChange }) {
   `;
 }
 
+function MetricCard({ label, value, meta, accent }) {
+  return html`
+    <div className="rounded-[24px] border border-white/10 bg-gradient-to-br ${accent} p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
+      <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-slate-300">${label}</p>
+      <strong className="mt-3 block text-3xl font-extrabold text-white">${value}</strong>
+      <p className="mt-2 text-sm text-slate-300">${meta}</p>
+    </div>
+  `;
+}
+
+function SectionBlock({ title, description, children }) {
+  return html`
+    <section className="rounded-[28px] border border-white/10 bg-white/[0.04] p-5 sm:p-6">
+      <div className="mb-5 flex flex-col gap-2 border-b border-white/10 pb-4">
+        <h4 className="text-lg font-bold text-white">${title}</h4>
+        <p className="text-sm text-slate-300">${description}</p>
+      </div>
+      ${children}
+    </section>
+  `;
+}
+
 function ProfilePanel(props) {
   const {
     fetchProfile,
@@ -225,10 +290,43 @@ function ProfilePanel(props) {
     return () => {
       active = false;
     };
-  }, [fetchProfile, refreshKey, statusMessage]);
+  }, [fetchProfile, refreshKey]);
+
+  useEffect(() => {
+    if (!loading && statusMessage) {
+      setStatus(statusMessage);
+    }
+  }, [statusMessage, loading]);
 
   const completion = useMemo(() => profileCompletion(draft), [draft]);
   const avatar = photoPreview || draft.avatar || "https://api.dicebear.com/8.x/thumbs/svg?seed=Student";
+  const badgeClass = badgeTone(completion);
+  const summaryCards = [
+    {
+      label: "Current CGPA",
+      value: (summary?.cgpa ?? 0).toFixed(2),
+      meta: `${summary?.completedSemesters ?? 0} semesters recorded`,
+      accent: "from-sky-500/20 to-blue-500/10"
+    },
+    {
+      label: "Total Credits",
+      value: String(summary?.totalCredits ?? 0),
+      meta: "Credits earned across saved semesters",
+      accent: "from-cyan-500/20 to-teal-500/10"
+    },
+    {
+      label: "Backlogs",
+      value: String(summary?.backlogs ?? 0),
+      meta: "Subjects needing improvement",
+      accent: "from-amber-500/20 to-orange-500/10"
+    },
+    {
+      label: "Profile Score",
+      value: `${completion}%`,
+      meta: "Completion of your academic profile",
+      accent: "from-indigo-500/20 to-violet-500/10"
+    }
+  ];
 
   function updateField(key, value) {
     setDraft(current => ({ ...current, [key]: value }));
@@ -252,12 +350,17 @@ function ProfilePanel(props) {
   }
 
   async function handleSave() {
+    const photoOnlyChange = Boolean(photoPreview) && !profileCoreChanged(profile, draft);
     const nextErrors = validateProfile(draft);
     setErrors(nextErrors);
-    if (Object.keys(nextErrors).length) return;
+    if (Object.keys(nextErrors).length && !photoOnlyChange) {
+      const firstError = Object.values(nextErrors)[0];
+      setStatus(firstError || "Please complete the required profile fields before saving.");
+      return;
+    }
 
     setSaving(true);
-    setStatus("Saving profile changes...");
+    setStatus(photoOnlyChange ? "Saving profile photo..." : "Saving profile changes...");
 
     try {
       const response = await saveProfile?.(draft);
@@ -301,16 +404,16 @@ function ProfilePanel(props) {
   }
 
   return html`
-    <section className="w-full min-h-screen overflow-y-auto rounded-[32px] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.18),transparent_28%),linear-gradient(180deg,rgba(6,12,24,0.94),rgba(11,23,45,0.96))] p-4 shadow-[0_30px_90px_rgba(2,6,23,0.55)] backdrop-blur-2xl sm:p-6 lg:p-8">
+    <section className="w-full min-h-screen overflow-y-auto rounded-[36px] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.18),transparent_28%),linear-gradient(180deg,rgba(6,12,24,0.94),rgba(11,23,45,0.96))] p-4 shadow-[0_30px_90px_rgba(2,6,23,0.55)] backdrop-blur-2xl sm:p-6 lg:p-8">
       <div className="mx-auto w-full max-w-7xl">
-        <div className="border-b border-white/10 pb-6">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-            <div className="flex flex-col gap-5 md:flex-row md:items-center">
-              <div className="relative mx-auto md:mx-0">
+        <div className="border-b border-white/10 pb-7">
+          <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-center">
+              <div className="relative mx-auto lg:mx-0">
                 <img
                   src=${avatar}
                   alt="Student profile"
-                  className="h-28 w-28 rounded-full border-4 border-sky-300/30 object-cover shadow-[0_0_0_12px_rgba(59,130,246,0.08)]"
+                  className="h-28 w-28 rounded-[28px] border-4 border-sky-300/30 object-cover shadow-[0_0_0_12px_rgba(59,130,246,0.08)]"
                 />
                 <label className=${`absolute -bottom-2 right-0 inline-flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold transition ${editing ? "cursor-pointer border-sky-300/30 bg-sky-400 text-slate-950 hover:bg-sky-300" : "cursor-not-allowed border-white/10 bg-white/10 text-slate-300 opacity-70"}`}>
                   <i className="fa-solid fa-camera"></i>
@@ -319,18 +422,19 @@ function ProfilePanel(props) {
                 </label>
               </div>
 
-              <div className="text-center md:text-left">
-                <p className="text-xs font-bold uppercase tracking-[0.28em] text-sky-200/80">Student Profile Dashboard</p>
+              <div className="text-center lg:text-left">
+                <p className="text-xs font-bold uppercase tracking-[0.28em] text-sky-200/80">Student Profile Workspace</p>
                 <h3 className="mt-2 text-3xl font-extrabold tracking-tight text-white">${placeholderFor(draft.fullName, "Student Name")}</h3>
                 <p className="mt-2 text-sm text-slate-300">${placeholderFor(draft.email, "No email available")}</p>
-                <div className="mt-4 flex flex-wrap justify-center gap-2 md:justify-start">
+                <div className="mt-4 flex flex-wrap justify-center gap-2 lg:justify-start">
                   <span className="rounded-full border border-white/10 bg-white/[0.08] px-3 py-1 text-xs font-semibold text-sky-100">${placeholderFor(draft.branch, "Branch pending")}</span>
                   <span className="rounded-full border border-white/10 bg-white/[0.08] px-3 py-1 text-xs font-semibold text-sky-100">${placeholderFor(draft.regulation, "Regulation pending")}</span>
+                  <span className="rounded-full border border-white/10 bg-white/[0.08] px-3 py-1 text-xs font-semibold text-slate-200">${placeholderFor(draft.hallTicket, "Hall ticket pending")}</span>
                 </div>
               </div>
             </div>
 
-            <div className="flex flex-wrap justify-center gap-3 lg:justify-end">
+            <div className="flex flex-wrap justify-center gap-3 xl:justify-end">
               ${editing
                 ? html`
                   <button type="button" className="inline-flex min-h-[48px] items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] px-5 text-sm font-semibold text-slate-200 transition hover:-translate-y-0.5 hover:bg-white/[0.1]" onClick=${cancelEdit} disabled=${saving}>
@@ -348,47 +452,119 @@ function ProfilePanel(props) {
             </div>
           </div>
 
-          <div className="mt-6 rounded-[24px] border border-white/10 bg-white/[0.05] p-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="mt-6 grid grid-cols-1 gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+            <div className="rounded-[28px] border border-white/10 bg-white/[0.05] p-5">
               <div>
-                <p className="text-sm font-semibold text-white">Profile Completion</p>
-                <p className="mt-1 text-sm text-slate-300">Complete missing details to unlock a cleaner and fully personalized student dashboard.</p>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-white">Profile Completion</p>
+                    <p className="mt-1 text-sm text-slate-300">Complete missing details to unlock a cleaner and fully personalized student dashboard.</p>
+                  </div>
+                  <span className=${`rounded-full border bg-gradient-to-r px-4 py-2 text-sm font-bold ${badgeClass}`}>${completion}% ready</span>
+                </div>
+                <div className="mt-4 h-3 overflow-hidden rounded-full bg-slate-950/60">
+                  <div className="h-full rounded-full bg-gradient-to-r from-sky-400 via-blue-500 to-cyan-400 transition-all duration-500" style=${{ width: `${completion}%` }}></div>
+                </div>
+                <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <div className="rounded-2xl border border-white/10 bg-slate-950/30 px-4 py-3">
+                    <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">Joining Year</p>
+                    <strong className="mt-2 block text-white">${placeholderFor(draft.joiningYear, "Pending")}</strong>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-slate-950/30 px-4 py-3">
+                    <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">Phone</p>
+                    <strong className="mt-2 block text-white">${placeholderFor(draft.phone, "Pending")}</strong>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-slate-950/30 px-4 py-3">
+                    <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">College</p>
+                    <strong className="mt-2 block text-white">${placeholderFor(draft.collegeName, "Pending")}</strong>
+                  </div>
+                </div>
               </div>
-              <span className="text-lg font-extrabold text-sky-200">${completion}%</span>
             </div>
-            <div className="mt-4 h-3 overflow-hidden rounded-full bg-slate-950/60">
-              <div className="h-full rounded-full bg-gradient-to-r from-sky-400 via-blue-500 to-cyan-400 transition-all duration-500" style=${{ width: `${completion}%` }}></div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              ${summaryCards.map(card => html`
+                <${MetricCard}
+                  key=${card.label}
+                  label=${card.label}
+                  value=${card.value}
+                  meta=${card.meta}
+                  accent=${card.accent}
+                />
+              `)}
             </div>
           </div>
         </div>
 
-        <div className="mt-6 rounded-[28px] border border-white/10 bg-white/[0.04] p-4 sm:p-5 lg:p-6">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            ${FIELD_CONFIG.map(field => html`
-              <${FieldCard}
-                key=${field.key}
-                field=${field}
-                value=${draft[field.key] || ""}
-                error=${errors[field.key]}
-                isEditing=${editing}
-                onChange=${updateField}
-              />
+        <div className="mt-6 grid grid-cols-1 gap-5 xl:grid-cols-[1.15fr_0.85fr]">
+          <div className="space-y-5">
+            ${FIELD_GROUPS.map(group => html`
+              <${SectionBlock}
+                key=${group.title}
+                title=${group.title}
+                description=${group.description}
+              >
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  ${group.fields.map(key => {
+                    const field = FIELD_CONFIG.find(item => item.key === key);
+                    return html`
+                      <${FieldCard}
+                        key=${field.key}
+                        field=${field}
+                        value=${draft[field.key] || ""}
+                        error=${errors[field.key]}
+                        isEditing=${editing}
+                        onChange=${updateField}
+                      />
+                    `;
+                  })}
+                </div>
+              </${SectionBlock}>
             `)}
+          </div>
 
-            ${[
-              { key: "currentCgpa", label: "Current CGPA", value: (summary?.cgpa ?? 0).toFixed(2) },
-              { key: "totalCredits", label: "Total Credits", value: String(summary?.totalCredits ?? 0) }
-            ].map(item => html`
-              <div key=${item.key} className="rounded-[24px] border border-white/10 bg-slate-950/25 p-4 transition duration-200 hover:border-sky-300/20 hover:bg-slate-950/35">
-                <label className="text-xs font-bold uppercase tracking-[0.22em] text-slate-400">${item.label}</label>
-                <input
-                  className="mt-3 w-full cursor-not-allowed rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3 text-sm font-medium text-slate-200 outline-none"
-                  type="text"
-                  value=${item.value}
-                  disabled
-                />
+          <div className="space-y-5">
+            <${SectionBlock}
+              title="Academic Snapshot"
+              description="A compact view of your academic standing inside the platform."
+            >
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-1">
+                ${[
+                  { label: "Saved Semesters", value: String(summary?.completedSemesters ?? 0), meta: "Semesters currently tracked" },
+                  { label: "Backlogs", value: String(summary?.backlogs ?? 0), meta: "Count of failed or absent subjects" },
+                  { label: "Gender", value: placeholderFor(draft.gender, "Not set"), meta: "Profile identity detail" },
+                  { label: "Date of Birth", value: placeholderFor(draft.dob, "Not set"), meta: "Personal record detail" }
+                ].map(item => html`
+                  <div key=${item.label} className="rounded-[22px] border border-white/10 bg-slate-950/30 p-4">
+                    <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">${item.label}</p>
+                    <strong className="mt-2 block text-xl font-bold text-white">${item.value}</strong>
+                    <p className="mt-2 text-sm text-slate-300">${item.meta}</p>
+                  </div>
+                `)}
               </div>
-            `)}
+            </${SectionBlock}>
+
+            <${SectionBlock}
+              title="Profile Guidance"
+              description="A cleaner checklist so it is obvious what still needs attention."
+            >
+              <div className="space-y-3">
+                ${FIELD_CONFIG.filter(field => field.required && !String(draft[field.key] || "").trim()).length
+                  ? FIELD_CONFIG.filter(field => field.required && !String(draft[field.key] || "").trim()).map(field => html`
+                      <div key=${field.key} className="rounded-[20px] border border-amber-300/20 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">
+                        <strong className="font-semibold">${field.label}</strong> still needs to be completed.
+                      </div>
+                    `)
+                  : html`
+                      <div className="rounded-[20px] border border-emerald-300/20 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-100">
+                        All required profile fields are complete.
+                      </div>
+                    `}
+                <div className="rounded-[20px] border border-white/10 bg-slate-950/30 px-4 py-3 text-sm text-slate-300">
+                  Read-only fields like email and hall ticket are synced from your account records.
+                </div>
+              </div>
+            </${SectionBlock}>
           </div>
         </div>
 

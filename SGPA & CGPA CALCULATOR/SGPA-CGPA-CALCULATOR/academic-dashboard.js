@@ -11,6 +11,7 @@ import {
   uploadProfileImage
 } from "./app.js";
 import { mountProfilePanel } from "./profile-panel.js";
+import { CURRICULUM, BRANCH_OPTIONS, normalizeBranchCode } from "./curriculum-data.js";
 
 const THEME_KEY = "theme";
 const SETTINGS_DOC_ID = "dashboard";
@@ -34,11 +35,12 @@ const defaultState = {
   },
   semesters: {},
   instantCalculator: {
+    branch: "CSE",
     semester: "1-1",
     regulation: "R23",
     rows: [
-      { name: "Mathematics", code: "MATH101", credits: "3", grade: "A" },
-      { name: "Programming", code: "CS102", credits: "4", grade: "S" }
+      { name: "Mathematics", credits: "3", grade: "A" },
+      { name: "Programming", credits: "4", grade: "S" }
     ]
   }
 };
@@ -51,6 +53,7 @@ let profilePanel = null;
 let sharedActionsReady = false;
 let profilePanelRefreshKey = 0;
 let profileStatusMessage = "Profile synced with your account.";
+let syllabusControlsReady = false;
 
 document.addEventListener("DOMContentLoaded", () => {
   initTheme();
@@ -167,10 +170,18 @@ function initSharedActions() {
   const addInstantRowBtn = document.getElementById("addInstantRowBtn");
   const calculateInstantBtn = document.getElementById("calculateInstantBtn");
   const resetInstantBtn = document.getElementById("resetInstantBtn");
+  const applyInstantSyllabusBtn = document.getElementById("applyInstantSyllabusBtn");
   const themeToggleBtn = document.getElementById("themeToggleBtn");
   const logoutBtn = document.getElementById("logoutBtn");
+  const instantBranchSelect = document.getElementById("instantBranchSelect");
   const instantSemesterSelect = document.getElementById("instantSemesterSelect");
   const instantRegulationSelect = document.getElementById("instantRegulationSelect");
+  const resultExportModal = document.getElementById("resultExportModal");
+  const openResultExportBtn = document.getElementById("openResultExportBtn");
+  const closeResultExportBtn = document.getElementById("closeResultExportBtn");
+  const downloadResultPdfBtn = document.getElementById("downloadResultPdfBtn");
+  const printResultBtn = document.getElementById("printResultBtn");
+  const shareResultBtn = document.getElementById("shareResultBtn");
 
   openProfileButtons.forEach(button => button.addEventListener("click", async () => {
     profileModal?.classList.add("is-open");
@@ -182,6 +193,12 @@ function initSharedActions() {
   closeProfileBtn?.addEventListener("click", () => profileModal?.classList.remove("is-open"));
 
   [profileModal].forEach(modal => {
+    modal?.addEventListener("click", event => {
+      if (event.target === modal) modal.classList.remove("is-open");
+    });
+  });
+
+  [resultExportModal].forEach(modal => {
     modal?.addEventListener("click", event => {
       if (event.target === modal) modal.classList.remove("is-open");
     });
@@ -209,6 +226,7 @@ function initSharedActions() {
 
   resetInstantBtn?.addEventListener("click", async () => {
     currentState.instantCalculator = {
+      branch: currentState.instantCalculator.branch || normalizeBranchCode(currentState.profile.branch) || "CSE",
       semester: currentState.instantCalculator.semester || "1-1",
       regulation: currentState.profile.regulation || "R23",
       rows: [createEmptyInstantRow()]
@@ -217,16 +235,79 @@ function initSharedActions() {
     await persistInstantCalculator();
   });
 
+  instantBranchSelect?.addEventListener("change", async event => {
+    currentState.instantCalculator.branch = event.target.value;
+    syncInstantSyllabusStatus();
+    updateInstantSummary(currentState.instantCalculator);
+    await persistInstantCalculator();
+  });
+
   instantSemesterSelect?.addEventListener("change", async event => {
     currentState.instantCalculator.semester = event.target.value;
+    syncInstantSyllabusStatus();
     updateInstantSummary(currentState.instantCalculator);
     await persistInstantCalculator();
   });
 
   instantRegulationSelect?.addEventListener("change", async event => {
     currentState.instantCalculator.regulation = event.target.value;
+    syncInstantSyllabusStatus();
     updateInstantSummary(currentState.instantCalculator);
     await persistInstantCalculator();
+  });
+
+  applyInstantSyllabusBtn?.addEventListener("click", async () => {
+    applyInstantSyllabus();
+    await persistInstantCalculator();
+  });
+
+  openResultExportBtn?.addEventListener("click", () => {
+    const exportData = buildSemesterExportData();
+    resultExportModal?.classList.add("is-open");
+
+    if (!exportData.ok) {
+      setResultExportStatus(exportData.message, true);
+      renderResultSheetPreview(null);
+      return;
+    }
+
+    renderResultSheetPreview(exportData.data);
+    setResultExportStatus(`Preview ready for Semester ${exportData.data.semesterKey}. You can now download, print, or share the result sheet.`);
+  });
+
+  closeResultExportBtn?.addEventListener("click", () => resultExportModal?.classList.remove("is-open"));
+
+  downloadResultPdfBtn?.addEventListener("click", async () => {
+    const exportData = buildSemesterExportData();
+    if (!exportData.ok) {
+      setResultExportStatus(exportData.message, true);
+      return;
+    }
+
+    renderResultSheetPreview(exportData.data);
+    await downloadResultSheetPdf(exportData.data);
+  });
+
+  printResultBtn?.addEventListener("click", () => {
+    const exportData = buildSemesterExportData();
+    if (!exportData.ok) {
+      setResultExportStatus(exportData.message, true);
+      return;
+    }
+
+    renderResultSheetPreview(exportData.data);
+    printResultSheet(exportData.data);
+  });
+
+  shareResultBtn?.addEventListener("click", async () => {
+    const exportData = buildSemesterExportData();
+    if (!exportData.ok) {
+      setResultExportStatus(exportData.message, true);
+      return;
+    }
+
+    renderResultSheetPreview(exportData.data);
+    await shareResultSheet(exportData.data);
   });
 
   themeToggleBtn?.addEventListener("click", () => {
@@ -253,6 +334,7 @@ function initSharedActions() {
   document.addEventListener("keydown", event => {
     if (event.key === "Escape") {
       profileModal?.classList.remove("is-open");
+      resultExportModal?.classList.remove("is-open");
     }
   });
 
@@ -380,6 +462,7 @@ function renderSemesterPage(state) {
   const summary = computeSummary(state);
   setText("sidebarSemesterCount", String(summary.completedSemesters));
   updateProfileSummaryStats(summary);
+  initSyllabusControls();
 
   host.innerHTML = SEMESTER_KEYS.map(key => {
     const semester = state.semesters[key] || emptySemester();
@@ -442,7 +525,7 @@ function renderSubjectRows(subjects) {
   return rows.map(subject => `
     <div class="subject-row">
       <input type="text" placeholder="Subject name" value="${escapeHtml(subject.name || "")}" />
-      <input type="number" min="0.5" step="0.5" placeholder="Credits" value="${escapeHtml(String(subject.credits || ""))}" />
+      <input type="number" min="0" step="0.5" placeholder="Credits" value="${escapeHtml(String(subject.credits || ""))}" />
       <select>
         ${["", "S", "A", "B", "C", "D", "E", "F", "Ab"].map(grade => `<option value="${grade}"${subject.grade === grade ? " selected" : ""}>${grade || "Grade"}</option>`).join("")}
       </select>
@@ -457,7 +540,7 @@ function addSemesterRow(key) {
   row.className = "subject-row";
   row.innerHTML = `
     <input type="text" placeholder="Subject name" />
-    <input type="number" min="0.5" step="0.5" placeholder="Credits" />
+    <input type="number" min="0" step="0.5" placeholder="Credits" />
     <select>
       <option value="">Grade</option>
       <option value="S">S</option>
@@ -497,7 +580,7 @@ async function saveSemester(key) {
     const grade = gradeSelect.value;
 
     if (!name && !creditInput.value && !grade) continue;
-    if (!name || !credits || credits <= 0 || !grade) return;
+    if (!name || !Number.isFinite(credits) || credits < 0 || !grade) return;
     subjects.push({ name, credits, grade });
   }
 
@@ -529,6 +612,327 @@ async function saveSemester(key) {
   }
 }
 
+function buildSemesterExportData() {
+  const semesterKey = getSelectedSemesterKey();
+  if (!semesterKey) {
+    return { ok: false, message: "Choose a semester first so the result sheet knows which semester to export." };
+  }
+
+  const subjects = readSemesterRows(semesterKey);
+  if (!subjects.length) {
+    return { ok: false, message: `Semester ${semesterKey} has no subjects yet. Load subjects or add rows before exporting.` };
+  }
+
+  const invalidSubject = subjects.find(subject => !subject.name || !Number.isFinite(subject.credits) || subject.credits < 0 || !subject.grade);
+  if (invalidSubject) {
+    return { ok: false, message: "Complete subject name, credits, and grade for every visible row before exporting the result sheet." };
+  }
+
+  const totalCredits = Number(subjects.reduce((sum, subject) => sum + subject.credits, 0).toFixed(1));
+  const weightedPoints = subjects.reduce((sum, subject) => sum + (subject.credits * (GRADE_POINTS[subject.grade] ?? 0)), 0);
+  const passedSubjects = subjects.filter(subject => subject.grade !== "F" && subject.grade !== "Ab").length;
+  const sgpa = totalCredits ? Number((weightedPoints / totalCredits).toFixed(2)) : 0;
+  const regulation = document.getElementById("syllabusRegulationSelect")?.value
+    || currentState.profile.regulation
+    || "R23";
+  const profile = currentState.profile || defaultState.profile;
+
+  return {
+    ok: true,
+    data: {
+      semesterKey,
+      regulation,
+      branch: document.getElementById("syllabusBranchSelect")?.value || normalizeBranchCode(profile.branch) || "CSE",
+      examTitle: formatSemesterExamTitle(semesterKey, regulation),
+      studentName: profile.name || "Student",
+      hallTicket: profile.hallTicket || "Not set",
+      collegeName: profile.collegeName || "College Name Not Available",
+      totalCredits,
+      passedSubjects,
+      appearedSubjects: subjects.length,
+      sgpa,
+      subjects: subjects.map((subject, index) => ({
+        ...subject,
+        serialNumber: index + 1,
+        gradePoint: GRADE_POINTS[subject.grade] ?? 0,
+        status: subject.grade === "F" || subject.grade === "Ab" ? "Fail" : "Pass"
+      }))
+    }
+  };
+}
+
+function getSelectedSemesterKey() {
+  return document.getElementById("syllabusSemesterSelect")?.value || getOpenSemesterKey() || "";
+}
+
+function readSemesterRows(key) {
+  const list = document.getElementById(`subjects-${key}`);
+  if (list) {
+    const rows = Array.from(list.querySelectorAll(".subject-row"));
+    const subjects = rows.map(row => {
+      const [nameInput, creditInput, gradeSelect] = row.querySelectorAll("input, select");
+      return {
+        name: nameInput?.value.trim() || "",
+        credits: parseFloat(creditInput?.value),
+        grade: gradeSelect?.value || ""
+      };
+    }).filter(subject => subject.name || Number.isFinite(subject.credits) || subject.grade);
+
+    if (subjects.length) return subjects;
+  }
+
+  return Array.isArray(currentState.semesters[key]?.subjects)
+    ? currentState.semesters[key].subjects.map(subject => ({
+      name: subject.name || "",
+      credits: Number(subject.credits),
+      grade: subject.grade || ""
+    }))
+    : [];
+}
+
+function formatSemesterExamTitle(semesterKey, regulation) {
+  const [year, part] = String(semesterKey).split("-");
+  const yearMap = {
+    1: "I B. TECH",
+    2: "II B. TECH",
+    3: "III B. TECH",
+    4: "IV B. TECH"
+  };
+  const semesterMap = {
+    1: "I SEMESTER",
+    2: "II SEMESTER"
+  };
+
+  return `${yearMap[year] || `Semester ${semesterKey}`} ${semesterMap[part] || ""} REGULAR EXAMINATIONS (${regulation})`.trim();
+}
+
+function renderResultSheetPreview(data) {
+  const host = document.getElementById("resultSheetPreview");
+  if (!host) return;
+
+  if (!data) {
+    host.innerHTML = `
+      <div class="result-sheet-placeholder">
+        <i class="fa-solid fa-file-circle-plus"></i>
+        <strong>Result sheet preview will appear here.</strong>
+        <span>Load or edit a semester, add grades, then use Export Result.</span>
+      </div>
+    `;
+    return;
+  }
+
+  host.innerHTML = `
+    <article class="result-sheet" id="resultSheetCard">
+      <header class="result-sheet__header">
+        <p class="result-sheet__brand">Jawaharlal Nehru Technological University Style Result Sheet</p>
+        <h2>${escapeHtml(data.examTitle)}</h2>
+        <div class="result-sheet__meta">
+          <span><strong>Branch:</strong> ${escapeHtml(data.branch)}</span>
+          <span><strong>Regulation:</strong> ${escapeHtml(data.regulation)}</span>
+        </div>
+      </header>
+
+      <section class="result-sheet__details">
+        <div class="result-detail"><span>Student Name</span><strong>${escapeHtml(data.studentName)}</strong></div>
+        <div class="result-detail"><span>Hall Ticket Number</span><strong>${escapeHtml(data.hallTicket)}</strong></div>
+        <div class="result-detail"><span>College Name</span><strong>${escapeHtml(data.collegeName)}</strong></div>
+        <div class="result-detail"><span>SGPA</span><strong>${data.sgpa.toFixed(2)}</strong></div>
+        <div class="result-detail"><span>Total Credits</span><strong>${data.totalCredits.toFixed(1)}</strong></div>
+        <div class="result-detail"><span>Total Subjects Appeared</span><strong>${data.appearedSubjects}</strong></div>
+        <div class="result-detail"><span>Total Subjects Passed</span><strong>${data.passedSubjects}</strong></div>
+      </section>
+
+      <table class="result-sheet__table">
+        <thead>
+          <tr>
+            <th>S.No</th>
+            <th>Course Name</th>
+            <th>Grade</th>
+            <th>Grade Point</th>
+            <th>Credits</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${data.subjects.map(subject => `
+            <tr>
+              <td>${subject.serialNumber}</td>
+              <td>${escapeHtml(subject.name)}</td>
+              <td>${escapeHtml(subject.grade)}</td>
+              <td>${subject.gradePoint}</td>
+              <td>${subject.credits.toFixed(1)}</td>
+              <td>${subject.status}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+
+      <footer class="result-sheet__footer">
+        <div><strong>Result:</strong> ${data.passedSubjects === data.appearedSubjects ? "PASS" : "PASS WITH BACKLOGS"}</div>
+        <div><strong>Generated:</strong> ${new Date().toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric" })}</div>
+      </footer>
+    </article>
+  `;
+}
+
+function setResultExportStatus(message, isError = false) {
+  const node = document.getElementById("resultExportStatus");
+  if (!node) return;
+  node.textContent = message;
+  node.classList.toggle("is-error", Boolean(isError));
+}
+
+async function downloadResultSheetPdf(data) {
+  try {
+    const canvas = await renderResultSheetCanvas();
+    const pdf = buildPdfFromCanvas(canvas);
+    pdf.save(buildResultExportFilename(data, "pdf"));
+    setResultExportStatus(`PDF downloaded for Semester ${data.semesterKey}.`);
+  } catch (error) {
+    console.error("Result PDF export error:", error);
+    setResultExportStatus("Unable to generate the PDF right now. Please try again.", true);
+  }
+}
+
+async function shareResultSheet(data) {
+  try {
+    const shareText = [
+      data.examTitle,
+      `Student: ${data.studentName}`,
+      `Hall Ticket: ${data.hallTicket}`,
+      `SGPA: ${data.sgpa.toFixed(2)}`,
+      `Credits: ${data.totalCredits.toFixed(1)}`,
+      `Passed: ${data.passedSubjects}/${data.appearedSubjects}`
+    ].join("\n");
+
+    const canvas = await renderResultSheetCanvas();
+    const pdf = buildPdfFromCanvas(canvas);
+    const blob = pdf.output("blob");
+    const file = new File([blob], buildResultExportFilename(data, "pdf"), { type: "application/pdf" });
+
+    if (navigator.share && navigator.canShare?.({ files: [file] })) {
+      await navigator.share({
+        title: `Semester ${data.semesterKey} Result`,
+        text: shareText,
+        files: [file]
+      });
+      setResultExportStatus(`Result shared for Semester ${data.semesterKey}.`);
+      return;
+    }
+
+    if (navigator.share) {
+      await navigator.share({
+        title: `Semester ${data.semesterKey} Result`,
+        text: shareText
+      });
+      setResultExportStatus(`Result shared for Semester ${data.semesterKey}.`);
+      return;
+    }
+
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(shareText);
+      setResultExportStatus("Sharing is not supported on this device. Result details were copied to the clipboard instead.");
+      return;
+    }
+
+    setResultExportStatus("Sharing is not supported in this browser.", true);
+  } catch (error) {
+    if (error?.name === "AbortError") {
+      setResultExportStatus("Share cancelled.");
+      return;
+    }
+    console.error("Result share error:", error);
+    setResultExportStatus("Unable to share the result sheet right now.", true);
+  }
+}
+
+function printResultSheet(data) {
+  const preview = document.getElementById("resultSheetPreview");
+  if (!preview) return;
+
+  const printWindow = window.open("", "_blank", "noopener,noreferrer,width=960,height=1200");
+  if (!printWindow) {
+    setResultExportStatus("Pop-up was blocked. Please allow pop-ups to print the result sheet.", true);
+    return;
+  }
+
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <title>Semester ${escapeHtml(data.semesterKey)} Result</title>
+      <style>
+        body { margin: 0; padding: 24px; background: #eef2f7; font-family: "Times New Roman", Georgia, serif; }
+        .result-sheet { max-width: 794px; margin: 0 auto; background: #fff; color: #111827; border: 1px solid #d1d5db; padding: 28px; }
+        .result-sheet__header { text-align: center; border-bottom: 1px solid #d1d5db; padding-bottom: 18px; }
+        .result-sheet__header h2 { margin: 10px 0 0; font-size: 22px; line-height: 1.5; }
+        .result-sheet__brand { margin: 0; font-size: 12px; text-transform: uppercase; letter-spacing: 0.16em; color: #4b5563; }
+        .result-sheet__meta { display: flex; justify-content: center; gap: 18px; flex-wrap: wrap; margin-top: 12px; font-size: 14px; }
+        .result-sheet__details { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 22px 0; }
+        .result-detail { border: 1px solid #d1d5db; padding: 12px 14px; }
+        .result-detail span { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; color: #6b7280; margin-bottom: 6px; }
+        .result-detail strong { font-size: 15px; }
+        .result-sheet__table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        .result-sheet__table th, .result-sheet__table td { border: 1px solid #d1d5db; padding: 10px; text-align: left; }
+        .result-sheet__table th { background: #f8fafc; }
+        .result-sheet__footer { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; border-top: 1px solid #d1d5db; padding-top: 18px; margin-top: 20px; font-size: 14px; }
+        @media print {
+          body { background: #fff; padding: 0; }
+          .result-sheet { border: none; margin: 0; max-width: none; }
+        }
+      </style>
+    </head>
+    <body>${preview.innerHTML}</body>
+    </html>
+  `);
+  printWindow.document.close();
+  printWindow.focus();
+  printWindow.print();
+  setResultExportStatus(`Print view opened for Semester ${data.semesterKey}.`);
+}
+
+async function renderResultSheetCanvas() {
+  const target = document.getElementById("resultSheetCard");
+  if (!target) throw new Error("Result sheet preview is not available.");
+  if (!window.html2canvas) throw new Error("html2canvas is unavailable.");
+
+  return window.html2canvas(target, {
+    scale: 2,
+    backgroundColor: "#ffffff",
+    useCORS: true
+  });
+}
+
+function buildPdfFromCanvas(canvas) {
+  const JsPdfCtor = window.jspdf?.jsPDF;
+  if (!JsPdfCtor) throw new Error("jsPDF is unavailable.");
+
+  const pdf = new JsPdfCtor({
+    orientation: "portrait",
+    unit: "mm",
+    format: "a4"
+  });
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+  const margin = 10;
+  const usableWidth = pageWidth - (margin * 2);
+  const usableHeight = pageHeight - (margin * 2);
+  const imageWidth = usableWidth;
+  const imageHeight = (canvas.height * imageWidth) / canvas.width;
+  const finalHeight = Math.min(imageHeight, usableHeight);
+  const imageData = canvas.toDataURL("image/png");
+
+  pdf.addImage(imageData, "PNG", margin, margin, imageWidth, finalHeight, undefined, "FAST");
+  return pdf;
+}
+
+function buildResultExportFilename(data, extension) {
+  const safeHallTicket = String(data.hallTicket || "student").replace(/[^a-z0-9-_]/gi, "_");
+  return `semester-${data.semesterKey}-result-${safeHallTicket}.${extension}`;
+}
+
 async function saveProfileChanges(draft) {
   if (!currentUser) return;
 
@@ -543,7 +947,8 @@ async function saveProfileChanges(draft) {
     phone: draft.phone?.trim() || "",
     collegeName: draft.collegeName?.trim() || "",
     gender: draft.gender || "",
-    dob: draft.dob || ""
+    dob: draft.dob || "",
+    avatar: currentState.profile.avatar || ""
   };
 
   try {
@@ -565,7 +970,9 @@ async function saveProfileChanges(draft) {
     return updatedProfile;
   } catch (error) {
     console.error("Profile update error:", error);
-    profileStatusMessage = "Unable to save profile changes right now.";
+    profileStatusMessage = error?.message
+      ? `Unable to save profile changes right now: ${error.message}`
+      : "Unable to save profile changes right now.";
     return false;
   }
 }
@@ -574,8 +981,17 @@ function renderInstantCalculator() {
   const host = document.getElementById("instantRows");
   if (!host) return;
 
+  const branchSelect = document.getElementById("instantBranchSelect");
   const semesterSelect = document.getElementById("instantSemesterSelect");
   const regulationSelect = document.getElementById("instantRegulationSelect");
+
+  if (branchSelect) {
+    branchSelect.innerHTML = BRANCH_OPTIONS.map(option => `<option value="${option.code}">${option.code} - ${option.label}</option>`).join("");
+    branchSelect.value = BRANCH_OPTIONS.some(option => option.code === currentState.instantCalculator.branch)
+      ? currentState.instantCalculator.branch
+      : normalizeBranchCode(currentState.profile.branch) || "CSE";
+    currentState.instantCalculator.branch = branchSelect.value;
+  }
 
   if (semesterSelect) {
     semesterSelect.innerHTML = SEMESTER_KEYS.map(key => `<option value="${key}">Semester ${key}</option>`).join("");
@@ -587,15 +1003,13 @@ function renderInstantCalculator() {
     regulationSelect.value = currentState.instantCalculator.regulation;
   }
 
+  syncInstantSyllabusStatus();
+
   host.innerHTML = currentState.instantCalculator.rows.map((row, index) => `
     <div class="instant-row" data-instant-row="${index}">
       <label class="instant-field">
         <span class="instant-field__label">Subject Name</span>
         <input type="text" placeholder="Subject name" value="${escapeHtml(row.name || "")}" data-field="name" />
-      </label>
-      <label class="instant-field">
-        <span class="instant-field__label">Subject Code</span>
-        <input type="text" placeholder="Subject code" value="${escapeHtml(row.code || "")}" data-field="code" />
       </label>
       <label class="instant-field">
         <span class="instant-field__label">Credits</span>
@@ -657,10 +1071,9 @@ function updateInstantSummary(calculatorState, forceValidation = false) {
   const sgpa = credits ? weighted / credits : 0;
   const averageCredits = validRows.length ? credits / validRows.length : 0;
   const backlogCount = validRows.filter(row => row.grade === "F" || row.grade === "Ab").length;
-  const progressTotal = Math.max(rows.length * 4, 1);
+  const progressTotal = Math.max(rows.length * 3, 1);
   const completedFields = rows.reduce((acc, row) => acc
     + Number(Boolean(row.name?.trim()))
-    + Number(Boolean(row.code?.trim()))
     + Number(Boolean(String(row.credits || "").trim()))
     + Number(Boolean(row.grade?.trim())), 0);
   const progress = Math.round((completedFields / progressTotal) * 100);
@@ -697,7 +1110,7 @@ function updateInstantSummary(calculatorState, forceValidation = false) {
       validationNode.textContent = "Fill in every subject row to unlock accurate live SGPA updates.";
     } else if (invalidRows.length) {
       validationNode.textContent = forceValidation
-        ? "Complete subject name, code, credits, and grade for each active row before finalizing SGPA."
+        ? "Complete subject name, credits, and grade for each active row before finalizing SGPA."
         : `${invalidRows.length} row${invalidRows.length > 1 ? "s are" : " is"} incomplete. Live SGPA uses only fully completed subjects.`;
     } else {
       validationNode.textContent = "All visible rows are valid. Your SGPA summary is fully up to date.";
@@ -749,12 +1162,12 @@ function emptySemester() {
 function normalizeInstantCalculatorSettings(settings, fallbackRegulation = "R23") {
   if (Array.isArray(settings)) {
     return {
+      branch: "CSE",
       semester: "1-1",
       regulation: fallbackRegulation || "R23",
       rows: settings.length
         ? settings.map(row => ({
           name: row?.name || "",
-          code: row?.code || "",
           credits: String(row?.credits || ""),
           grade: row?.grade || ""
         }))
@@ -763,12 +1176,12 @@ function normalizeInstantCalculatorSettings(settings, fallbackRegulation = "R23"
   }
 
   return {
+    branch: settings?.branch || "CSE",
     semester: settings?.semester || "1-1",
     regulation: settings?.regulation || fallbackRegulation || "R23",
     rows: Array.isArray(settings?.rows) && settings.rows.length
       ? settings.rows.map(row => ({
         name: row?.name || "",
-        code: row?.code || "",
         credits: String(row?.credits || ""),
         grade: row?.grade || ""
       }))
@@ -776,17 +1189,153 @@ function normalizeInstantCalculatorSettings(settings, fallbackRegulation = "R23"
   };
 }
 
+function syncInstantSyllabusStatus() {
+  const statusNode = document.getElementById("instantSyllabusStatus");
+  if (!statusNode) return;
+
+  const regulation = document.getElementById("instantRegulationSelect")?.value || currentState.instantCalculator.regulation || "R23";
+  const branch = document.getElementById("instantBranchSelect")?.value || currentState.instantCalculator.branch || "";
+  const semester = document.getElementById("instantSemesterSelect")?.value || currentState.instantCalculator.semester || "";
+  const subjects = CURRICULUM[regulation]?.[branch]?.[semester];
+
+  if (!branch || !semester) {
+    statusNode.textContent = "Choose branch, regulation, and semester to load the official subject list into this calculator.";
+    return;
+  }
+
+  if (!subjects?.length) {
+    statusNode.textContent = `No syllabus data is available for ${branch} ${semester} under ${regulation} yet.`;
+    return;
+  }
+
+  const totalCredits = subjects.reduce((sum, subject) => sum + Number(subject.credits || 0), 0);
+  statusNode.textContent = `${subjects.length} official subjects are available for ${branch} ${semester} under ${regulation}, totaling ${totalCredits.toFixed(1)} credits. Loading will replace the current calculator rows.`;
+}
+
+function applyInstantSyllabus() {
+  const statusNode = document.getElementById("instantSyllabusStatus");
+  const branch = document.getElementById("instantBranchSelect")?.value || currentState.instantCalculator.branch || "";
+  const semester = document.getElementById("instantSemesterSelect")?.value || currentState.instantCalculator.semester || "";
+  const regulation = document.getElementById("instantRegulationSelect")?.value || currentState.instantCalculator.regulation || "R23";
+  const subjects = CURRICULUM[regulation]?.[branch]?.[semester];
+
+  if (!subjects?.length) {
+    if (statusNode) statusNode.textContent = `No syllabus data is available for ${branch} ${semester} under ${regulation} yet.`;
+    return;
+  }
+
+  currentState.instantCalculator.branch = branch;
+  currentState.instantCalculator.semester = semester;
+  currentState.instantCalculator.regulation = regulation;
+  currentState.instantCalculator.rows = subjects.map((subject, index) => ({
+    name: subject.name,
+    credits: String(subject.credits),
+    grade: ""
+  }));
+
+  renderInstantCalculator();
+
+  if (statusNode) {
+    statusNode.textContent = `Loaded ${subjects.length} official subjects into the Instant SGPA Calculator for ${branch} ${semester}. Add grades to calculate immediately.`;
+  }
+}
+
+function initSyllabusControls() {
+  const regulationSelect = document.getElementById("syllabusRegulationSelect");
+  const branchSelect = document.getElementById("syllabusBranchSelect");
+  const semesterSelect = document.getElementById("syllabusSemesterSelect");
+  const applyButton = document.getElementById("applySyllabusBtn");
+  if (!regulationSelect || !branchSelect || !semesterSelect || !applyButton) return;
+
+  if (!syllabusControlsReady) {
+    regulationSelect.addEventListener("change", syncSyllabusStatus);
+    branchSelect.addEventListener("change", syncSyllabusStatus);
+    semesterSelect.addEventListener("change", syncSyllabusStatus);
+    applyButton.addEventListener("click", applySelectedSyllabus);
+    syllabusControlsReady = true;
+  }
+
+  regulationSelect.innerHTML = REGULATION_OPTIONS.map(option => `<option value="${option}">${option}</option>`).join("");
+  branchSelect.innerHTML = BRANCH_OPTIONS.map(option => `<option value="${option.code}">${option.code} - ${option.label}</option>`).join("");
+  semesterSelect.innerHTML = SEMESTER_KEYS.map(key => `<option value="${key}">Semester ${key}</option>`).join("");
+
+  regulationSelect.value = REGULATION_OPTIONS.includes(currentState.profile.regulation) ? currentState.profile.regulation : "R23";
+  branchSelect.value = BRANCH_OPTIONS.some(option => option.code === normalizeBranchCode(currentState.profile.branch))
+    ? normalizeBranchCode(currentState.profile.branch)
+    : "CSE";
+  semesterSelect.value = getOpenSemesterKey() || "1-1";
+  syncSyllabusStatus();
+}
+
+function syncSyllabusStatus() {
+  const regulation = document.getElementById("syllabusRegulationSelect")?.value || "R23";
+  const branch = document.getElementById("syllabusBranchSelect")?.value || "";
+  const semester = document.getElementById("syllabusSemesterSelect")?.value || "";
+  const statusNode = document.getElementById("syllabusStatus");
+  if (!statusNode) return;
+
+  const subjects = CURRICULUM[regulation]?.[branch]?.[semester];
+  if (!branch || !semester) {
+    statusNode.textContent = "Select regulation, branch, and semester to load official subjects.";
+    return;
+  }
+
+  if (!subjects?.length) {
+    statusNode.textContent = `No syllabus data is available for ${branch} ${semester} under ${regulation} yet.`;
+    return;
+  }
+
+  const totalCredits = subjects.reduce((sum, subject) => sum + Number(subject.credits || 0), 0);
+  statusNode.textContent = `${subjects.length} subjects available for ${branch} ${semester} under ${regulation} with ${totalCredits.toFixed(1)} credits. Loading replaces the visible editor rows for that semester until you save.`;
+}
+
+function applySelectedSyllabus() {
+  const regulation = document.getElementById("syllabusRegulationSelect")?.value || "R23";
+  const branch = document.getElementById("syllabusBranchSelect")?.value || "";
+  const semester = document.getElementById("syllabusSemesterSelect")?.value || "";
+  const statusNode = document.getElementById("syllabusStatus");
+  const subjects = CURRICULUM[regulation]?.[branch]?.[semester];
+
+  if (!subjects?.length) {
+    if (statusNode) statusNode.textContent = `No syllabus data is available for ${branch} ${semester} under ${regulation} yet.`;
+    return;
+  }
+
+  currentState.semesters[semester] = {
+    ...(currentState.semesters[semester] || emptySemester()),
+    subjects: subjects.map(subject => ({
+      name: subject.name,
+      credits: subject.credits,
+      grade: ""
+    })),
+    sgpa: 0,
+    credits: 0,
+    backlogs: 0,
+    isOpen: true
+  };
+
+  Object.keys(currentState.semesters).forEach(key => {
+    currentState.semesters[key].isOpen = key === semester;
+  });
+
+  renderSemesterPage(currentState);
+  if (statusNode) statusNode.textContent = `Loaded ${subjects.length} official subjects into Semester ${semester} for ${branch}. Review grades and click Save Semester when you're ready.`;
+}
+
+function getOpenSemesterKey() {
+  return Object.entries(currentState.semesters).find(([, semester]) => semester?.isOpen)?.[0] || "";
+}
+
 function createEmptyInstantRow() {
-  return { name: "", code: "", credits: "", grade: "" };
+  return { name: "", credits: "", grade: "" };
 }
 
 function isInstantRowBlank(row) {
-  return !row.name?.trim() && !row.code?.trim() && !String(row.credits || "").trim() && !row.grade?.trim();
+  return !row.name?.trim() && !String(row.credits || "").trim() && !row.grade?.trim();
 }
 
 function isInstantRowValid(row) {
   return Boolean(row.name?.trim())
-    && Boolean(row.code?.trim())
     && Number(row.credits) > 0
     && Boolean(row.grade?.trim());
 }
@@ -826,7 +1375,9 @@ function compressBranch(branch) {
   return branch
     .replace("Computer Science and Engineering", "CSE")
     .replace("Electronics and Communication Engineering", "ECE")
-    .replace("Electrical and Electronics Engineering", "EEE");
+    .replace("Electrical and Electronics Engineering", "EEE")
+    .replace("Mechanical Engineering", "MECHANICAL")
+    .replace("Civil Engineering", "CIVIL");
 }
 
 function hasIncompleteProfile(profile, user) {

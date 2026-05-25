@@ -7,7 +7,7 @@ const firebaseConfig = {
   apiKey:            "AIzaSyA-WJkA-RreayE01_ay2n4aLOI9LtzMsEg",
   authDomain:        "login-page-5df2a.firebaseapp.com",
   projectId:         "login-page-5df2a",
-  storageBucket:     "login-page-5df2a.firebasestorage.app",
+  storageBucket:     "login-page-5df2a.appspot.com",
   messagingSenderId: "853096033339",
   appId:             "1:853096033339:web:89b98288fee269bc91401e"
 };
@@ -15,4 +15,4 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db   = getFirestore(app);
-export const storage = getStorage(app);
+export const storage = getStorage(app, "gs://login-page-5df2a.appspot.com");

@@ -103,6 +103,10 @@
 
         <div class="sgpa-controls">
           <label class="sgpa-control">
+            <span>Branch</span>
+            <select id="instantBranchSelect"></select>
+          </label>
+          <label class="sgpa-control">
             <span>Semester</span>
             <select id="instantSemesterSelect"></select>
           </label>
@@ -128,8 +132,13 @@
               <i class="fa-solid fa-plus"></i>
               Add Subject
             </button>
+            <button class="primary-action" id="applyInstantSyllabusBtn" type="button">
+              <i class="fa-solid fa-book-open"></i>
+              Load Official Subjects
+            </button>
           </div>
         </div>
+        <p class="syllabus-status" id="instantSyllabusStatus">Choose branch, regulation, and semester to load the official subject list into this calculator.</p>
 
         <div class="sgpa-overview">
           <article class="sgpa-highlight glow-panel">
@@ -168,7 +177,6 @@
           <div class="sgpa-entry-panel">
             <div class="sgpa-table-head">
               <div>Subject Name</div>
-              <div>Subject Code</div>
               <div>Credits</div>
               <div>Grade</div>
               <div>Action</div>

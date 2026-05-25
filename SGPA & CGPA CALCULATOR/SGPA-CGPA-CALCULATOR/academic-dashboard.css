@@ -718,7 +718,7 @@ button {
 
 .sgpa-table-head {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(160px, 0.9fr) minmax(110px, 0.65fr) minmax(120px, 0.7fr) 70px;
+  grid-template-columns: minmax(0, 1.6fr) minmax(110px, 0.7fr) minmax(120px, 0.8fr) 70px;
   gap: 12px;
   padding: 0 6px;
   color: var(--muted);
@@ -735,7 +735,7 @@ button {
 
 .instant-row {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(160px, 0.9fr) minmax(110px, 0.65fr) minmax(120px, 0.7fr) 70px;
+  grid-template-columns: minmax(0, 1.6fr) minmax(110px, 0.7fr) minmax(120px, 0.8fr) 70px;
   gap: 12px;
   padding: 16px;
   align-items: center;
@@ -1006,6 +1006,13 @@ button {
   box-shadow: 0 18px 30px rgba(29, 78, 216, 0.24);
 }
 
+.primary-action:hover,
+.secondary-action:hover,
+.save-action:hover,
+.subject-add-btn:hover {
+  transform: translateY(-2px);
+}
+
 .secondary-action,
 .subject-add-btn {
   color: #c9dcff;
@@ -1030,6 +1037,61 @@ button {
 .info-banner {
   gap: 14px;
   margin-top: 22px;
+}
+
+.syllabus-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.syllabus-control {
+  min-width: 200px;
+  flex: 1 1 200px;
+  display: grid;
+  gap: 8px;
+}
+
+.syllabus-control span,
+.syllabus-status {
+  color: var(--muted);
+}
+
+.syllabus-control select {
+  width: 100%;
+  min-height: 48px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: rgba(3, 10, 24, 0.86);
+  padding: 0 14px;
+  color: var(--text);
+  outline: none;
+  transition: border-color var(--transition), box-shadow var(--transition), transform var(--transition);
+}
+
+[data-theme="light"] .syllabus-control select {
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.syllabus-control select:focus {
+  border-color: rgba(96, 165, 250, 0.48);
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
+  transform: translateY(-1px);
+}
+
+.syllabus-action {
+  align-self: end;
+}
+
+.syllabus-action--export {
+  background: linear-gradient(135deg, #0f9bd7, #2563eb 52%, #1d4ed8);
+  box-shadow: 0 18px 34px rgba(14, 116, 203, 0.26), 0 0 0 1px rgba(125, 211, 252, 0.18);
+}
+
+.syllabus-status {
+  margin-top: 14px;
+  line-height: 1.7;
 }
 
 .info-banner__icon,
@@ -1209,6 +1271,13 @@ button {
   flex-direction: column;
 }
 
+.modal-panel--result {
+  width: min(100%, 1120px);
+  max-height: calc(100vh - 40px);
+  display: flex;
+  flex-direction: column;
+}
+
 #profileReactRoot {
   flex: 1;
   min-height: 0;
@@ -1368,6 +1437,166 @@ button {
   font-size: 0.88rem;
 }
 
+.result-export-layout {
+  display: grid;
+  gap: 18px;
+  margin-top: 18px;
+}
+
+.result-export-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.result-export-status {
+  padding: 14px 16px;
+  border-radius: 16px;
+  color: #d6e5ff;
+  background: rgba(59, 130, 246, 0.12);
+  border: 1px solid rgba(96, 165, 250, 0.14);
+  line-height: 1.6;
+}
+
+.result-export-status.is-error {
+  color: #ffe2e2;
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(248, 113, 113, 0.18);
+}
+
+.result-sheet-canvas-wrap {
+  padding: 18px;
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at top, rgba(96, 165, 250, 0.14), transparent 44%),
+    rgba(4, 11, 24, 0.7);
+  border: 1px solid rgba(129, 147, 186, 0.14);
+  overflow: auto;
+}
+
+.result-sheet-canvas {
+  display: grid;
+  place-items: start center;
+  min-height: 420px;
+}
+
+.result-sheet-placeholder {
+  width: min(100%, 760px);
+  min-height: 320px;
+  display: grid;
+  place-items: center;
+  gap: 10px;
+  padding: 30px;
+  text-align: center;
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px dashed rgba(148, 163, 184, 0.28);
+  color: var(--muted);
+}
+
+.result-sheet-placeholder i {
+  font-size: 2rem;
+  color: #93c5fd;
+}
+
+.result-sheet {
+  width: 794px;
+  max-width: 100%;
+  background: #fff;
+  color: #111827;
+  border: 1px solid #d1d5db;
+  box-shadow: 0 26px 48px rgba(15, 23, 42, 0.18);
+  padding: 30px;
+  font-family: "Times New Roman", Georgia, serif;
+}
+
+.result-sheet__header {
+  text-align: center;
+  border-bottom: 1px solid #d1d5db;
+  padding-bottom: 18px;
+}
+
+.result-sheet__brand {
+  margin: 0;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: #4b5563;
+}
+
+.result-sheet__header h2 {
+  margin: 12px 0 0;
+  font-size: 24px;
+  line-height: 1.45;
+}
+
+.result-sheet__meta {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 14px 20px;
+  margin-top: 14px;
+  color: #374151;
+  font-size: 14px;
+}
+
+.result-sheet__details {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 22px 0;
+}
+
+.result-detail {
+  min-height: 78px;
+  padding: 12px 14px;
+  border: 1px solid #d1d5db;
+}
+
+.result-detail span {
+  display: block;
+  margin-bottom: 8px;
+  color: #6b7280;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.result-detail strong {
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.result-sheet__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.result-sheet__table th,
+.result-sheet__table td {
+  border: 1px solid #d1d5db;
+  padding: 10px 12px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.result-sheet__table th {
+  background: #f8fafc;
+  font-size: 13px;
+}
+
+.result-sheet__footer {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid #d1d5db;
+  font-size: 14px;
+}
+
 @media (max-width: 1100px) {
   .dashboard-grid,
   .semester-grid,
@@ -1453,7 +1682,7 @@ button {
 
   .sgpa-table-head,
   .instant-row {
-    grid-template-columns: minmax(0, 1fr) minmax(140px, 0.9fr) minmax(100px, 0.7fr) minmax(110px, 0.8fr) 64px;
+    grid-template-columns: minmax(0, 1fr) minmax(100px, 0.7fr) minmax(110px, 0.8fr) 64px;
   }
 }
 
@@ -1510,7 +1739,8 @@ button {
   }
 
   .modal-panel,
-  .modal-panel--profile {
+  .modal-panel--profile,
+  .modal-panel--result {
     max-height: calc(100vh - 24px);
   }
 
@@ -1538,6 +1768,33 @@ button {
   .summary-stat {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .result-export-actions .primary-action,
+  .result-export-actions .secondary-action {
+    width: 100%;
+  }
+
+  .result-sheet {
+    width: 100%;
+    padding: 18px;
+  }
+
+  .result-sheet__details {
+    grid-template-columns: 1fr;
+  }
+
+  .result-sheet__table {
+    font-size: 12px;
+  }
+
+  .result-sheet__table th,
+  .result-sheet__table td {
+    padding: 8px;
+  }
+
+  .result-sheet__header h2 {
+    font-size: 18px;
   }
 }
 
