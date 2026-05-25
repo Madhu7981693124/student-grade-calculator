@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>About — SGPA & CGPA Calculator</title>
+  <link rel="stylesheet" href="style.css?v=2"/>
+</head>
+<body>
+<header class="modern-header">
+  <div class="header-container">
+    <div class="header-left">
+      <div class="app-title"><h1>📚 SGPA & CGPA Calculator</h1></div>
+    </div>
+    <div class="header-center">
+      <p class="welcome-text">Learn more about the app</p>
+    </div>
+    <div class="header-right">
+      <div class="profile-container">
+        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Student" alt="Profile" class="profile-image"/>
+      </div>
+    </div>
+  </div>
+  <div class="header-controls">
+    <span class="user-chip" id="userChip">...</span>
+    <button class="dark-toggle" id="darkToggleBtn">🌙 Dark</button>
+    <button class="logout-btn" id="logoutBtn">Logout</button>
+  </div>
+</header>
+<nav>
+  <a href="dashboard.html">&#127968; Dashboard</a>
+  <a href="sgpa.html">&#128202; SGPA</a>
+  <a href="cgpa.html">&#128200; CGPA</a>
+  <a href="about.html">&#8505;&#65039; About</a>
+</nav>
+
+<div class="page">
+  <div class="card">
+    <h2>&#8505;&#65039; About This App</h2>
+    <p>This SGPA &amp; CGPA Calculator is designed for students following the R23 Regulation. It helps you calculate your Semester Grade Point Average (SGPA) and Cumulative Grade Point Average (CGPA) easily.</p>
+    <h3>Features:</h3>
+    <ul>
+      <li>Calculate SGPA for individual semesters</li>
+      <li>Track CGPA across all semesters</li>
+      <li>Save and manage your academic data</li>
+      <li>Visual charts for performance trends</li>
+      <li>Dark mode support</li>
+    </ul>
+    <h3>Grade Reference (R23 Regulation):</h3>
+    <div class="table-wrap">
+      <table class="grade-table">
+        <thead><tr><th>Marks</th><th>Grade</th><th>Points</th><th>Performance</th></tr></thead>
+        <tbody>
+          <tr><td>90+</td><td>S</td><td>10</td><td>Superior</td></tr>
+          <tr><td>80&#8211;89</td><td>A</td><td>9</td><td>Excellent</td></tr>
+          <tr><td>70&#8211;79</td><td>B</td><td>8</td><td>Very Good</td></tr>
+          <tr><td>60&#8211;69</td><td>C</td><td>7</td><td>Good</td></tr>
+          <tr><td>50&#8211;59</td><td>D</td><td>6</td><td>Average</td></tr>
+          <tr><td>40&#8211;49</td><td>E</td><td>5</td><td>Pass</td></tr>
+          <tr><td>&lt;40</td><td>F</td><td>0</td><td>Fail</td></tr>
+          <tr><td>Absent</td><td>Ab</td><td>0</td><td>Absent</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { requireAuth, logout, initDarkMode, toggleDark, setActiveNav } from "./app.js";
+  initDarkMode();
+  setActiveNav();
+  document.getElementById("darkToggleBtn").addEventListener("click", toggleDark);
+  document.getElementById("logoutBtn").addEventListener("click", logout);
+  requireAuth(user => {
+    document.getElementById("userChip").textContent = user.email;
+  });
+</script>
+</body>
+</html>

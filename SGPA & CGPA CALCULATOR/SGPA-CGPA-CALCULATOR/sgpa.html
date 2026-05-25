@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SGPA — SGPA &amp; CGPA Calculator</title>
+  <link rel="stylesheet" href="style.css?v=2"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+<header class="modern-header">
+  <div class="header-container">
+    <div class="header-left">
+      <div class="app-title"><h1>📚 SGPA &amp; CGPA Calculator</h1></div>
+    </div>
+    <div class="header-center">
+      <p class="welcome-text">Calculate your SGPA easily</p>
+    </div>
+    <div class="header-right">
+      <div class="profile-container">
+        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Student" alt="Profile" class="profile-image"/>
+      </div>
+    </div>
+  </div>
+  <div class="header-controls">
+    <span class="user-chip" id="userChip">...</span>
+    <button class="dark-toggle" id="darkToggleBtn">🌙 Dark</button>
+    <button class="logout-btn" id="logoutBtn">Logout</button>
+  </div>
+</header>
+<nav>
+  <a href="dashboard.html">&#127968; Dashboard</a>
+  <a href="sgpa.html">&#128202; SGPA</a>
+  <a href="cgpa.html">&#128200; CGPA</a>
+  <a href="about.html">&#8505;&#65039; About</a>
+</nav>
+
+<div class="page">
+  <div class="card">
+    <h2>&#128202; SGPA Calculator</h2>
+    <div class="sem-select-row">
+      <div>
+        <label>Branch</label>
+        <select id="branchSelect" onchange="onBranchOrSemChange()">
+          <option value="">-- Select Branch --</option>
+          <option value="CSE">CSE</option>
+          <option value="ECE">ECE</option>
+          <option value="EEE">EEE</option>
+          <option value="MECH">MECH</option>
+          <option value="CIVIL">CIVIL</option>
+        </select>
+      </div>
+      <div>
+        <label>Semester</label>
+        <select id="semSelect" onchange="onBranchOrSemChange()">
+          <option value="">-- Select Semester --</option>
+          <option>Semester 1</option><option>Semester 2</option>
+          <option>Semester 3</option><option>Semester 4</option>
+          <option>Semester 5</option><option>Semester 6</option>
+          <option>Semester 7</option><option>Semester 8</option>
+        </select>
+      </div>
+    </div>
+    <div id="autoFillInfo" class="info" style="margin-bottom:10px;"></div>
+    <div id="subjectRows"></div>
+    <div class="btn-row">
+      <button class="btn btn-outline" onclick="addSubject()">+ Add Subject</button>
+      <button class="btn btn-primary" onclick="calcSGPA()">Calculate SGPA</button>
+      <button class="btn btn-danger"  onclick="resetForm()">Reset</button>
+    </div>
+    <div id="sgpaError" class="error"></div>
+    <div id="sgpaResult" style="display:none;">
+      <div class="result-box">
+        <div class="sub" id="sgpaSemLabel"></div>
+        <div class="value" id="sgpaValue">0.00</div>
+        <div class="sub" id="sgpaPercent"></div>
+        <div class="perf" id="sgpaPerf"></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-success" onclick="saveCloud()">&#128190; Save to CGPA</button>
+        <button class="btn btn-outline" onclick="dlPDF()">&#128196; Download PDF</button>
+        <button class="btn btn-outline" onclick="exportCSV()">&#128196; Export CSV</button>
+      </div>
+      <div id="saveMsg" class="info" style="margin-top:8px;"></div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import {
+  GRADE_POINTS, gradePerformance, toPercent,
+  requireAuth, initDarkMode, toggleDark, setActiveNav,
+  saveSemester, logout
+} from "./app.js";
+
+// ── Subject data by branch → semester ──────────────────────────
+const CURRICULUM = {
+  CSE: {
+    "Semester 1": [
+      { name: "Linear Algebra & Calculus",              credits: 3 },
+      { name: "Engineering Physics",                    credits: 3 },
+      { name: "Communicative English",                  credits: 2 },
+      { name: "Basic Civil & Mechanical Engineering",   credits: 3 },
+      { name: "Introduction to Programming",            credits: 3 },
+      { name: "Communicative English Lab",              credits: 1 },
+      { name: "Engineering Physics Lab",                credits: 1 },
+      { name: "Engineering Workshop",                   credits: 1.5 },
+      { name: "IT Workshop",                            credits: 1 },
+      { name: "Computer Programming Lab",               credits: 1.5 },
+      { name: "Health and Wellness, Yoga and Sports",   credits: 0.5 },
+    ],
+    "Semester 2": [
+      { name: "Differential Equations & Vector Calculus", credits: 3 },
+      { name: "Chemistry",                              credits: 3 },
+      { name: "Engineering Graphics",                   credits: 3 },
+      { name: "Basic Electrical & Electronics Engineering", credits: 3 },
+      { name: "Data Structures",                        credits: 3 },
+      { name: "Chemistry Lab",                          credits: 1 },
+      { name: "Electrical & Electronics Engineering Workshop", credits: 1.5 },
+      { name: "Data Structures Lab",                    credits: 1.5 },
+      { name: "NSS/NCC/Scouts & Guides/Community Service", credits: 0.5 },
+    ],
+    "Semester 3": [
+      { name: "Mathematical Foundations of Computer Science", credits: 3 },
+      { name: "Universal Human Values – Understanding Harmony", credits: 3 },
+      { name: "Digital Logic & Computer Organization",  credits: 3 },
+      { name: "Software Engineering",                   credits: 3 },
+      { name: "Object Oriented Programming Through Java", credits: 3 },
+      { name: "CASE Tools Lab",                         credits: 1.5 },
+      { name: "OOP Through Java Lab",                   credits: 1.5 },
+      { name: "Python Programming",                     credits: 2 },
+    ],
+    "Semester 4": [
+      { name: "Managerial Economics and Financial Analysis", credits: 2 },
+      { name: "Probability & Statistics",               credits: 3 },
+      { name: "Operating Systems",                      credits: 3 },
+      { name: "Database Management Systems",            credits: 3 },
+      { name: "Formal Languages and Automata Theory",   credits: 3 },
+      { name: "Operating Systems Lab",                  credits: 1.5 },
+      { name: "Database Management Systems Lab",        credits: 1.5 },
+      { name: "Full Stack Development – I",             credits: 2 },
+      { name: "Design Thinking & Innovation",           credits: 2 },
+    ],
+    "Semester 5": [
+      { name: "Data Warehousing and Data Mining",       credits: 3 },
+      { name: "Compiler Design",                        credits: 3 },
+      { name: "Design and Analysis of Algorithms",      credits: 3 },
+      { name: "Professional Elective - I",              credits: 3 },
+      { name: "Open Elective - I",                      credits: 3 },
+      { name: "Data Mining Lab",                        credits: 1.5 },
+      { name: "Compiler Design Lab",                    credits: 1.5 },
+      { name: "Full Stack Development - II",            credits: 2 },
+      { name: "Tinkering Lab / Android App Development", credits: 1 },
+      { name: "Community Service Project",              credits: 2 },
+    ],
+    "Semester 6": [
+      { name: "Computer Networks",                      credits: 3 },
+      { name: "Artificial Intelligence",                credits: 3 },
+      { name: "Cryptography & Network Security",        credits: 3 },
+      { name: "Professional Elective - II",             credits: 3 },
+      { name: "Professional Elective - III",            credits: 3 },
+      { name: "Open Elective - II",                     credits: 3 },
+      { name: "AI Tools Lab",                           credits: 1.5 },
+      { name: "Computer Network Lab",                   credits: 1.5 },
+      { name: "Soft Skills / 21st Century Employability Skills", credits: 2 },
+    ],
+    "Semester 7": [
+      { name: "Machine Learning",                       credits: 3 },
+      { name: "Human Resources & Project Management",   credits: 2 },
+      { name: "Professional Elective - IV",             credits: 3 },
+      { name: "Professional Elective - V",              credits: 3 },
+      { name: "Open Elective - III",                    credits: 3 },
+      { name: "Open Elective - IV",                     credits: 3 },
+      { name: "Prompt Engineering",                     credits: 2 },
+      { name: "Evaluation of Industry Internship",      credits: 2 },
+    ],
+    "Semester 8": [
+      { name: "Full Semester Internship & Project Work", credits: 12 },
+    ],
+  },
+  ECE: {
+    "Semester 1": [
+      { name: "Mathematics - I",              credits: 4 },
+      { name: "Engineering Physics",           credits: 3 },
+      { name: "Engineering Chemistry",         credits: 3 },
+      { name: "Basic Electrical Engineering",  credits: 3 },
+      { name: "Engineering Drawing",           credits: 3 },
+      { name: "English Communication",         credits: 2 },
+    ],
+    "Semester 2": [
+      { name: "Mathematics - II",             credits: 4 },
+      { name: "Electronic Devices & Circuits", credits: 4 },
+      { name: "Network Analysis",             credits: 3 },
+      { name: "Programming in C",             credits: 3 },
+      { name: "Environmental Science",        credits: 2 },
+      { name: "Engineering Workshop",         credits: 2 },
+    ],
+    "Semester 3": [
+      { name: "Mathematics - III",            credits: 4 },
+      { name: "Signals & Systems",            credits: 4 },
+      { name: "Analog Circuits",              credits: 4 },
+      { name: "Digital Electronics",          credits: 3 },
+      { name: "Electromagnetic Theory",       credits: 3 },
+    ],
+    "Semester 4": [
+      { name: "Control Systems",              credits: 4 },
+      { name: "Communication Theory",         credits: 4 },
+      { name: "VLSI Design",                  credits: 3 },
+      { name: "Microprocessors & Microcontrollers", credits: 3 },
+      { name: "Linear IC Applications",       credits: 3 },
+    ],
+    "Semester 5": [
+      { name: "Digital Signal Processing",    credits: 4 },
+      { name: "Wireless Communications",      credits: 3 },
+      { name: "Embedded Systems",             credits: 3 },
+      { name: "Antenna & Wave Propagation",   credits: 3 },
+      { name: "Elective - I",                 credits: 3 },
+    ],
+    "Semester 6": [
+      { name: "Optical Communications",       credits: 3 },
+      { name: "Radar & TV Engineering",       credits: 3 },
+      { name: "Digital Image Processing",     credits: 4 },
+      { name: "IoT & Sensor Networks",        credits: 3 },
+      { name: "Elective - II",                credits: 3 },
+    ],
+    "Semester 7": [
+      { name: "5G & Advanced Communications", credits: 3 },
+      { name: "Machine Learning for ECE",     credits: 3 },
+      { name: "Elective - III",               credits: 3 },
+      { name: "Elective - IV",                credits: 3 },
+      { name: "Project Phase - I",            credits: 4 },
+    ],
+    "Semester 8": [
+      { name: "Project Phase - II",           credits: 8 },
+      { name: "Seminar",                      credits: 2 },
+      { name: "Elective - V",                 credits: 3 },
+      { name: "Elective - VI",                credits: 3 },
+    ],
+  },
+  EEE: {
+    "Semester 1": [
+      { name: "Mathematics - I",              credits: 4 },
+      { name: "Engineering Physics",           credits: 3 },
+      { name: "Engineering Chemistry",         credits: 3 },
+      { name: "Basic Electrical Engineering",  credits: 4 },
+      { name: "Engineering Drawing",           credits: 3 },
+      { name: "English Communication",         credits: 2 },
+    ],
+    "Semester 2": [
+      { name: "Mathematics - II",             credits: 4 },
+      { name: "Circuit Theory",               credits: 4 },
+      { name: "Electronic Devices",           credits: 3 },
+      { name: "Programming in C",             credits: 3 },
+      { name: "Environmental Science",        credits: 2 },
+      { name: "Engineering Workshop",         credits: 2 },
+    ],
+    "Semester 3": [
+      { name: "Mathematics - III",            credits: 4 },
+      { name: "Electrical Machines - I",      credits: 4 },
+      { name: "Electromagnetic Fields",       credits: 3 },
+      { name: "Signals & Systems",            credits: 3 },
+      { name: "Analog Electronics",           credits: 3 },
+    ],
+    "Semester 4": [
+      { name: "Electrical Machines - II",     credits: 4 },
+      { name: "Control Systems",              credits: 4 },
+      { name: "Power Systems - I",            credits: 3 },
+      { name: "Microprocessors",              credits: 3 },
+      { name: "Digital Electronics",          credits: 3 },
+    ],
+    "Semester 5": [
+      { name: "Power Systems - II",           credits: 4 },
+      { name: "Power Electronics",            credits: 4 },
+      { name: "Electrical Measurements",      credits: 3 },
+      { name: "Switchgear & Protection",      credits: 3 },
+      { name: "Elective - I",                 credits: 3 },
+    ],
+    "Semester 6": [
+      { name: "High Voltage Engineering",     credits: 3 },
+      { name: "Utilization of Electrical Energy", credits: 3 },
+      { name: "FACTS & HVDC",                 credits: 3 },
+      { name: "Renewable Energy Systems",     credits: 4 },
+      { name: "Elective - II",                credits: 3 },
+    ],
+    "Semester 7": [
+      { name: "Smart Grid Technology",        credits: 3 },
+      { name: "Electric Vehicles",            credits: 3 },
+      { name: "Elective - III",               credits: 3 },
+      { name: "Elective - IV",                credits: 3 },
+      { name: "Project Phase - I",            credits: 4 },
+    ],
+    "Semester 8": [
+      { name: "Project Phase - II",           credits: 8 },
+      { name: "Seminar",                      credits: 2 },
+      { name: "Elective - V",                 credits: 3 },
+      { name: "Elective - VI",                credits: 3 },
+    ],
+  },
+  MECH: {
+    "Semester 1": [
+      { name: "Mathematics - I",              credits: 4 },
+      { name: "Engineering Physics",           credits: 3 },
+      { name: "Engineering Chemistry",         credits: 3 },
+      { name: "Engineering Mechanics",         credits: 4 },
+      { name: "Engineering Drawing",           credits: 3 },
+      { name: "English Communication",         credits: 2 },
+    ],
+    "Semester 2": [
+      { name: "Mathematics - II",             credits: 4 },
+      { name: "Thermodynamics",               credits: 4 },
+      { name: "Manufacturing Processes",      credits: 3 },
+      { name: "Programming in C",             credits: 3 },
+      { name: "Environmental Science",        credits: 2 },
+      { name: "Engineering Workshop",         credits: 2 },
+    ],
+    "Semester 3": [
+      { name: "Mathematics - III",            credits: 4 },
+      { name: "Strength of Materials",        credits: 4 },
+      { name: "Fluid Mechanics",              credits: 4 },
+      { name: "Kinematics of Machinery",      credits: 3 },
+      { name: "Material Science",             credits: 3 },
+    ],
+    "Semester 4": [
+      { name: "Dynamics of Machinery",        credits: 4 },
+      { name: "Heat Transfer",                credits: 4 },
+      { name: "Machine Drawing",              credits: 3 },
+      { name: "Metrology & Measurements",     credits: 3 },
+      { name: "Design of Machine Elements",   credits: 3 },
+    ],
+    "Semester 5": [
+      { name: "Turbo Machinery",              credits: 4 },
+      { name: "CAD/CAM",                      credits: 3 },
+      { name: "Refrigeration & AC",           credits: 3 },
+      { name: "Operations Research",          credits: 3 },
+      { name: "Elective - I",                 credits: 3 },
+    ],
+    "Semester 6": [
+      { name: "Finite Element Methods",       credits: 3 },
+      { name: "Robotics",                     credits: 3 },
+      { name: "Industrial Engineering",       credits: 3 },
+      { name: "Automobile Engineering",       credits: 3 },
+      { name: "Elective - II",                credits: 3 },
+    ],
+    "Semester 7": [
+      { name: "Mechatronics",                 credits: 3 },
+      { name: "Additive Manufacturing",       credits: 3 },
+      { name: "Elective - III",               credits: 3 },
+      { name: "Elective - IV",                credits: 3 },
+      { name: "Project Phase - I",            credits: 4 },
+    ],
+    "Semester 8": [
+      { name: "Project Phase - II",           credits: 8 },
+      { name: "Seminar",                      credits: 2 },
+      { name: "Elective - V",                 credits: 3 },
+      { name: "Elective - VI",                credits: 3 },
+    ],
+  },
+  CIVIL: {
+    "Semester 1": [
+      { name: "Mathematics - I",              credits: 4 },
+      { name: "Engineering Physics",           credits: 3 },
+      { name: "Engineering Chemistry",         credits: 3 },
+      { name: "Engineering Mechanics",         credits: 4 },
+      { name: "Engineering Drawing",           credits: 3 },
+      { name: "English Communication",         credits: 2 },
+    ],
+    "Semester 2": [
+      { name: "Mathematics - II",             credits: 4 },
+      { name: "Surveying",                    credits: 4 },
+      { name: "Building Materials",           credits: 3 },
+      { name: "Programming in C",             credits: 3 },
+      { name: "Environmental Science",        credits: 2 },
+      { name: "Engineering Workshop",         credits: 2 },
+    ],
+    "Semester 3": [
+      { name: "Mathematics - III",            credits: 4 },
+      { name: "Strength of Materials",        credits: 4 },
+      { name: "Fluid Mechanics",              credits: 4 },
+      { name: "Concrete Technology",          credits: 3 },
+      { name: "Structural Analysis - I",      credits: 3 },
+    ],
+    "Semester 4": [
+      { name: "Structural Analysis - II",     credits: 4 },
+      { name: "Geotechnical Engineering",     credits: 4 },
+      { name: "Hydraulics & Hydraulic Machinery", credits: 3 },
+      { name: "Transportation Engineering",   credits: 3 },
+      { name: "Environmental Engineering",    credits: 3 },
+    ],
+    "Semester 5": [
+      { name: "Design of RC Structures",      credits: 4 },
+      { name: "Water Resources Engineering",  credits: 3 },
+      { name: "Foundation Engineering",       credits: 3 },
+      { name: "Estimation & Costing",         credits: 3 },
+      { name: "Elective - I",                 credits: 3 },
+    ],
+    "Semester 6": [
+      { name: "Design of Steel Structures",   credits: 4 },
+      { name: "Remote Sensing & GIS",         credits: 3 },
+      { name: "Construction Management",      credits: 3 },
+      { name: "Irrigation Engineering",       credits: 3 },
+      { name: "Elective - II",                credits: 3 },
+    ],
+    "Semester 7": [
+      { name: "Advanced Structural Design",   credits: 3 },
+      { name: "Smart Infrastructure",         credits: 3 },
+      { name: "Elective - III",               credits: 3 },
+      { name: "Elective - IV",                credits: 3 },
+      { name: "Project Phase - I",            credits: 4 },
+    ],
+    "Semester 8": [
+      { name: "Project Phase - II",           credits: 8 },
+      { name: "Seminar",                      credits: 2 },
+      { name: "Elective - V",                 credits: 3 },
+      { name: "Elective - VI",                credits: 3 },
+    ],
+  },
+};
+
+// ── State ───────────────────────────────────────────────────────
+let currentUser = null;
+
+// ── Init ────────────────────────────────────────────────────────
+initDarkMode();
+setActiveNav();
+requireAuth(user => {
+  currentUser = user;
+  document.getElementById("userChip").textContent = user.displayName || user.email;
+  addSubject(); // default empty row
+});
+
+document.getElementById("darkToggleBtn").onclick = toggleDark;
+document.getElementById("logoutBtn").onclick = logout;
+
+// ── Auto-fill on branch + semester change ───────────────────────
+window.onBranchOrSemChange = function () {
+  const branch = document.getElementById("branchSelect").value;
+  const sem    = document.getElementById("semSelect").value;
+  const info   = document.getElementById("autoFillInfo");
+
+  if (!branch || !sem) { info.textContent = ""; return; }
+
+  const subjects = CURRICULUM[branch]?.[sem];
+  if (!subjects) {
+    info.textContent = "No preset data for this combination. Add subjects manually.";
+    return;
+  }
+
+  document.getElementById("subjectRows").innerHTML = "";
+  subjects.forEach(s => addSubject(s.name, s.credits));
+  info.textContent = `✅ Auto-filled ${subjects.length} subjects for ${branch} – ${sem}`;
+};
+
+// ── Subject row management ──────────────────────────────────────
+window.addSubject = function (name = "", credits = "") {
+  const container = document.getElementById("subjectRows");
+  const row = document.createElement("div");
+  row.className = "subject-row";
+  row.innerHTML = `
+    <input class="sub-name" type="text" placeholder="Subject name" value="${name}" />
+    <select class="grade-sel">
+      ${Object.keys(GRADE_POINTS).map(g =>
+        `<option value="${g}">${g}</option>`
+      ).join("")}
+    </select>
+    <input type="number" class="credit-inp" placeholder="Credits" min="1" max="6" value="${credits}" />
+    <button class="remove-btn" onclick="this.closest('.subject-row').remove()">✕</button>
+  `;
+  container.appendChild(row);
+};
+
+// ── Calculate SGPA ──────────────────────────────────────────────
+window.calcSGPA = function () {
+  const rows = document.querySelectorAll(".subject-row");
+  const errEl = document.getElementById("sgpaError");
+  errEl.textContent = "";
+  document.getElementById("sgpaResult").style.display = "none";
+
+  if (!rows.length) { errEl.textContent = "Add at least one subject."; return; }
+
+  let weightedSum = 0, totalCredits = 0, valid = true;
+  rows.forEach(row => {
+    const name    = row.querySelector(".sub-name").value.trim();
+    const grade   = row.querySelector(".grade-sel").value;
+    const credits = parseFloat(row.querySelector(".credit-inp").value);
+    if (!name || isNaN(credits) || credits <= 0) { valid = false; return; }
+    weightedSum  += GRADE_POINTS[grade] * credits;
+    totalCredits += credits;
+  });
+
+  if (!valid)        { errEl.textContent = "Fill in all subject names and valid credits."; return; }
+  if (!totalCredits) { errEl.textContent = "Total credits must be greater than 0."; return; }
+
+  const sgpa = (weightedSum / totalCredits).toFixed(2);
+  const sem  = document.getElementById("semSelect").value || "Current Semester";
+
+  document.getElementById("sgpaSemLabel").textContent = sem;
+  document.getElementById("sgpaValue").textContent    = sgpa;
+  document.getElementById("sgpaPercent").textContent  = `${toPercent(sgpa)}%`;
+  document.getElementById("sgpaPerf").textContent     = gradePerformance(sgpa);
+  document.getElementById("sgpaResult").style.display = "block";
+
+  window._lastSGPA = { sgpa: parseFloat(sgpa), credits: totalCredits, sem, rows: [...rows] };
+};
+
+// ── Save to CGPA ────────────────────────────────────────────────
+window.saveCloud = async function () {
+  const msg = document.getElementById("saveMsg");
+  if (!window._lastSGPA) { msg.textContent = "Calculate SGPA first."; return; }
+
+  // build subjects array from current rows for dashboard compatibility
+  const subjects = window._lastSGPA.rows.map(row => ({
+    name:   row.querySelector(".sub-name").value.trim(),
+    credit: parseFloat(row.querySelector(".credit-inp").value),
+    grade:  row.querySelector(".grade-sel").value,
+  }));
+
+  try {
+    await saveSemester(currentUser.uid, {
+      sem:      window._lastSGPA.sem,
+      sgpa:     window._lastSGPA.sgpa,
+      credits:  window._lastSGPA.credits,
+      subjects,
+    });
+    msg.textContent = "✅ Saved successfully!";
+  } catch (e) {
+    msg.textContent = "❌ Save failed: " + e.message;
+  }
+};
+
+// ── Reset ───────────────────────────────────────────────────────
+window.resetForm = function () {
+  document.getElementById("branchSelect").value = "";
+  document.getElementById("semSelect").value    = "";
+  document.getElementById("autoFillInfo").textContent = "";
+  document.getElementById("subjectRows").innerHTML    = "";
+  document.getElementById("sgpaError").textContent    = "";
+  document.getElementById("sgpaResult").style.display = "none";
+  window._lastSGPA = null;
+  addSubject();
+};
+
+// ── PDF download ────────────────────────────────────────────────
+window.dlPDF = function () {
+  if (!window._lastSGPA) return;
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  let y = 20;
+  doc.setFontSize(16);
+  doc.text("SGPA Report", 14, y); y += 10;
+  doc.setFontSize(12);
+  doc.text(`Semester: ${window._lastSGPA.sem}`, 14, y); y += 8;
+  doc.text(`SGPA: ${window._lastSGPA.sgpa}`, 14, y); y += 8;
+  doc.text(`Total Credits: ${window._lastSGPA.credits}`, 14, y); y += 10;
+  window._lastSGPA.rows.forEach(row => {
+    const name    = row.querySelector(".sub-name").value;
+    const grade   = row.querySelector(".grade-sel").value;
+    const credits = row.querySelector(".credit-inp").value;
+    doc.text(`${name} | Grade: ${grade} | Credits: ${credits}`, 14, y);
+    y += 7;
+    if (y > 270) { doc.addPage(); y = 20; }
+  });
+  doc.save(`SGPA_${window._lastSGPA.sem.replace(/\s/g,"_")}.pdf`);
+};
+
+// ── CSV export ──────────────────────────────────────────────────
+window.exportCSV = function () {
+  if (!window._lastSGPA) return;
+  let csv = "Subject,Grade,Credits\n";
+  window._lastSGPA.rows.forEach(row => {
+    const name    = row.querySelector(".sub-name").value;
+    const grade   = row.querySelector(".grade-sel").value;
+    const credits = row.querySelector(".credit-inp").value;
+    csv += `"${name}",${grade},${credits}\n`;
+  });
+  csv += `\nSGPA,${window._lastSGPA.sgpa}\nTotal Credits,${window._lastSGPA.credits}`;
+  const a = document.createElement("a");
+  a.href = "data:text/csv," + encodeURIComponent(csv);
+  a.download = `SGPA_${window._lastSGPA.sem.replace(/\s/g,"_")}.csv`;
+  a.click();
+};
+</script>
+</body>
+</html>

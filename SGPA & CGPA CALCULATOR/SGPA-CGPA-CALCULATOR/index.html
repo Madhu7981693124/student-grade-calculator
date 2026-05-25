@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Login — SGPA & CGPA Calculator</title>
+  <link rel="stylesheet" href="style.css?v=3"/>
+  <style>
+    .auth-wrap {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex; align-items: stretch; justify-content: center;
+      min-height: 100vh; padding: 0;
+    }
+    .auth-panel {
+      display: flex; width: 100%; max-width: 900px;
+      margin: auto; border-radius: 24px; overflow: hidden;
+      box-shadow: 0 32px 80px rgba(0,0,0,0.25);
+    }
+    /* Left branding */
+    .auth-brand {
+      flex: 1; background: linear-gradient(160deg, #4f46e5 0%, #7c3aed 100%);
+      color: #fff; padding: 48px 40px; display: flex; flex-direction: column;
+      justify-content: center; gap: 24px;
+    }
+    .auth-brand .brand-icon { font-size: 3.5rem; }
+    .auth-brand h1 { font-size: 1.8rem; font-weight: 900; line-height: 1.2; }
+    .auth-brand p { font-size: 0.95rem; opacity: 0.85; line-height: 1.6; }
+    .auth-brand .brand-features { display: flex; flex-direction: column; gap: 12px; margin-top: 8px; }
+    .auth-brand .feat {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 0.88rem; opacity: 0.9;
+    }
+    .auth-brand .feat-icon {
+      width: 32px; height: 32px; background: rgba(255,255,255,0.15);
+      border-radius: 8px; display: flex; align-items: center; justify-content: center;
+      font-size: 1rem; flex-shrink: 0;
+    }
+    /* Right form */
+    .auth-card {
+      flex: 1; background: var(--card); padding: 48px 40px;
+      border-radius: 0; max-width: none; box-shadow: none; border: none;
+      display: flex; flex-direction: column; justify-content: center;
+    }
+    .auth-top { margin-bottom: 8px; }
+    .auth-card h2 { font-size: 1.5rem; }
+    /* Dark toggle in corner */
+    .auth-dark-btn {
+      position: fixed; top: 16px; right: 16px;
+      background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3);
+      color: #fff; padding: 6px 14px; border-radius: 20px;
+      cursor: pointer; font-size: 0.78rem; font-weight: 600;
+      backdrop-filter: blur(8px); z-index: 10;
+      transition: background 0.2s;
+    }
+    .auth-dark-btn:hover { background: rgba(255,255,255,0.25); }
+    [data-theme="dark"] .auth-dark-btn { color: #fff; }
+    /* Divider */
+    .auth-divider {
+      display: flex; align-items: center; gap: 12px;
+      margin: 16px 0; color: var(--subtext); font-size: 0.78rem;
+    }
+    .auth-divider::before, .auth-divider::after {
+      content: ''; flex: 1; height: 1px; background: var(--border);
+    }
+    /* Tab switcher */
+    .auth-tabs {
+      display: flex; background: var(--bg); border-radius: 10px;
+      padding: 4px; margin-bottom: 24px; gap: 4px;
+    }
+    .auth-tab {
+      flex: 1; padding: 9px; border: none; border-radius: 8px;
+      background: transparent; color: var(--subtext); font-size: 0.88rem;
+      font-weight: 600; cursor: pointer; transition: all 0.2s; font-family: inherit;
+    }
+    .auth-tab.active { background: var(--card); color: var(--primary); box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    /* Hide brand on mobile */
+    @media(max-width: 700px) {
+      .auth-panel { border-radius: 0; margin: 0; max-width: 100%; min-height: 100vh; }
+      .auth-brand { display: none; }
+      .auth-card { padding: 40px 24px; border-radius: 0; }
+    }
+    @media(max-width: 480px) {
+      .auth-card { padding: 32px 20px; }
+    }
+  </style>
+</head>
+<body>
+<button class="auth-dark-btn" id="darkToggleBtn">🌙 Dark</button>
+
+<div class="auth-wrap">
+  <div class="auth-panel">
+    <!-- Branding -->
+    <div class="auth-brand">
+      <div class="brand-icon">📚</div>
+      <div>
+        <h1>SGPA & CGPA Calculator</h1>
+        <p>Track your academic performance with ease. Built for JNTUGV R23 regulation students.</p>
+      </div>
+      <div class="brand-features">
+        <div class="feat"><div class="feat-icon">📊</div> Calculate SGPA per semester</div>
+        <div class="feat"><div class="feat-icon">🎯</div> Track CGPA across all semesters</div>
+        <div class="feat"><div class="feat-icon">📈</div> Visual performance trends</div>
+        <div class="feat"><div class="feat-icon">☁️</div> Sync data across devices</div>
+      </div>
+    </div>
+
+    <!-- Form -->
+    <div class="auth-card">
+      <div class="auth-top">
+        <h2>&#127891; Welcome back</h2>
+      </div>
+      <p class="subtitle" id="authSubtitle">Sign in to continue</p>
+
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tabLogin">Sign In</button>
+        <button class="auth-tab" id="tabSignup">Sign Up</button>
+      </div>
+
+      <!-- Login -->
+      <div id="loginForm">
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="loginEmail" placeholder="you@example.com"/>
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="loginPassword" placeholder="Enter your password"/>
+        </div>
+        <div id="loginError" class="error"></div>
+        <button class="btn btn-primary btn-full" id="loginBtn" style="margin-top:4px;">Sign In</button>
+        <div class="auth-divider">or</div>
+        <button class="btn btn-google" id="googleLoginBtn">
+          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18" alt="G"/>
+          Continue with Google
+        </button>
+      </div>
+
+      <!-- Signup -->
+      <div id="signupForm" style="display:none;">
+        <div class="form-group">
+          <label>Full Name</label>
+          <input type="text" id="signupName" placeholder="Your Name"/>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="form-group">
+            <label>Roll Number</label>
+            <input type="text" id="signupRoll" placeholder="Roll No"/>
+          </div>
+          <div class="form-group">
+            <label>Branch</label>
+            <input type="text" id="signupBranch" placeholder="Branch"/>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="signupEmail" placeholder="you@example.com"/>
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="signupPassword" placeholder="Min 6 characters"/>
+        </div>
+        <div id="signupError" class="error"></div>
+        <button class="btn btn-primary btn-full" id="signupBtn" style="margin-top:4px;">Create Account</button>
+        <div class="auth-divider">or</div>
+        <button class="btn btn-google" id="googleSignupBtn">
+          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18" alt="G"/>
+          Continue with Google
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { redirectIfLoggedIn, signUp, signIn, googleSignIn, friendlyError, initDarkMode, toggleDark } from "./app.js";
+  initDarkMode();
+  redirectIfLoggedIn();
+
+  document.getElementById("darkToggleBtn").addEventListener("click", toggleDark);
+
+  const switchForm = mode => {
+    const login = mode === "login";
+    document.getElementById("loginForm").style.display  = login ? "" : "none";
+    document.getElementById("signupForm").style.display = login ? "none" : "";
+    document.getElementById("authSubtitle").textContent = login ? "Sign in to continue" : "Create your account";
+    document.getElementById("loginError").textContent   = "";
+    document.getElementById("signupError").textContent  = "";
+    document.getElementById("tabLogin").classList.toggle("active", login);
+    document.getElementById("tabSignup").classList.toggle("active", !login);
+  };
+
+  document.getElementById("tabLogin").addEventListener("click",  () => switchForm("login"));
+  document.getElementById("tabSignup").addEventListener("click", () => switchForm("signup"));
+
+  const handleLogin = async () => {
+    const email = document.getElementById("loginEmail").value.trim();
+    const pass  = document.getElementById("loginPassword").value;
+    const err   = document.getElementById("loginError");
+    err.textContent = "";
+    if (!email || !pass) { err.textContent = "Please fill in all fields."; return; }
+    const btn = document.getElementById("loginBtn");
+    btn.textContent = "Signing in…"; btn.disabled = true;
+    try { await signIn(email, pass); location.href = "dashboard.html"; }
+    catch(e) { err.textContent = friendlyError(e.code); btn.textContent = "Sign In"; btn.disabled = false; }
+  };
+
+  const handleSignup = async () => {
+    const name   = document.getElementById("signupName").value.trim();
+    const roll   = document.getElementById("signupRoll").value.trim();
+    const branch = document.getElementById("signupBranch").value.trim();
+    const email  = document.getElementById("signupEmail").value.trim();
+    const pass   = document.getElementById("signupPassword").value;
+    const err    = document.getElementById("signupError");
+    err.textContent = "";
+    if (!name || !roll || !branch || !email || !pass) { err.textContent = "Please fill in all fields."; return; }
+    if (pass.length < 6) { err.textContent = "Password must be at least 6 characters."; return; }
+    const btn = document.getElementById("signupBtn");
+    btn.textContent = "Creating…"; btn.disabled = true;
+    try { await signUp(name, email, pass, roll, branch); location.href = "dashboard.html"; }
+    catch(e) { err.textContent = friendlyError(e.code); btn.textContent = "Create Account"; btn.disabled = false; }
+  };
+
+  document.getElementById("loginBtn").addEventListener("click", handleLogin);
+  document.getElementById("signupBtn").addEventListener("click", handleSignup);
+  document.getElementById("googleLoginBtn").addEventListener("click", async () => {
+    try { await googleSignIn(); location.href = "dashboard.html"; }
+    catch(e) { document.getElementById("loginError").textContent = friendlyError(e.code); }
+  });
+  document.getElementById("googleSignupBtn").addEventListener("click", async () => {
+    try { await googleSignIn(); location.href = "dashboard.html"; }
+    catch(e) { document.getElementById("signupError").textContent = friendlyError(e.code); }
+  });
+
+  document.addEventListener("keydown", e => {
+    if (e.key !== "Enter") return;
+    const loginVisible = document.getElementById("loginForm").style.display !== "none";
+    loginVisible ? handleLogin() : handleSignup();
+  });
+</script>
+</body>
+</html>
