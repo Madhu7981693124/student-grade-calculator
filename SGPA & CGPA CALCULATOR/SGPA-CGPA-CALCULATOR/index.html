@@ -1,241 +1,950 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Login — SGPA & CGPA Calculator</title>
-  <link rel="stylesheet" href="style.css?v=3"/>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Student Signup | SGPA & CGPA Calculator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ["Poppins", "Segoe UI", "sans-serif"]
+          },
+          boxShadow: {
+            glow: "0 24px 80px rgba(37, 99, 235, 0.25)"
+          },
+          keyframes: {
+            floaty: {
+              "0%, 100%": { transform: "translateY(0px)" },
+              "50%": { transform: "translateY(-10px)" }
+            },
+            pulseGlow: {
+              "0%, 100%": { boxShadow: "0 0 0 0 rgba(56, 189, 248, 0.4)" },
+              "70%": { boxShadow: "0 0 0 18px rgba(56, 189, 248, 0)" }
+            },
+            shimmer: {
+              "0%": { backgroundPosition: "0% 50%" },
+              "100%": { backgroundPosition: "100% 50%" }
+            }
+          },
+          animation: {
+            floaty: "floaty 6s ease-in-out infinite",
+            pulseGlow: "pulseGlow 2.4s infinite",
+            shimmer: "shimmer 4s linear infinite"
+          }
+        }
+      }
+    };
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
   <style>
-    .auth-wrap {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      display: flex; align-items: stretch; justify-content: center;
-      min-height: 100vh; padding: 0;
+    :root {
+      color-scheme: light;
     }
-    .auth-panel {
-      display: flex; width: 100%; max-width: 900px;
-      margin: auto; border-radius: 24px; overflow: hidden;
-      box-shadow: 0 32px 80px rgba(0,0,0,0.25);
+
+    html.dark {
+      color-scheme: dark;
     }
-    /* Left branding */
-    .auth-brand {
-      flex: 1; background: linear-gradient(160deg, #4f46e5 0%, #7c3aed 100%);
-      color: #fff; padding: 48px 40px; display: flex; flex-direction: column;
-      justify-content: center; gap: 24px;
+
+    body {
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at top left, rgba(96, 165, 250, 0.35), transparent 30%),
+        radial-gradient(circle at bottom right, rgba(244, 114, 182, 0.28), transparent 35%),
+        linear-gradient(135deg, #dbeafe 0%, #eff6ff 45%, #fdf2f8 100%);
     }
-    .auth-brand .brand-icon { font-size: 3.5rem; }
-    .auth-brand h1 { font-size: 1.8rem; font-weight: 900; line-height: 1.2; }
-    .auth-brand p { font-size: 0.95rem; opacity: 0.85; line-height: 1.6; }
-    .auth-brand .brand-features { display: flex; flex-direction: column; gap: 12px; margin-top: 8px; }
-    .auth-brand .feat {
-      display: flex; align-items: center; gap: 10px;
-      font-size: 0.88rem; opacity: 0.9;
+
+    html.dark body {
+      background:
+        radial-gradient(circle at top left, rgba(14, 165, 233, 0.28), transparent 30%),
+        radial-gradient(circle at bottom right, rgba(168, 85, 247, 0.18), transparent 30%),
+        linear-gradient(135deg, #020617 0%, #111827 45%, #172554 100%);
     }
-    .auth-brand .feat-icon {
-      width: 32px; height: 32px; background: rgba(255,255,255,0.15);
-      border-radius: 8px; display: flex; align-items: center; justify-content: center;
-      font-size: 1rem; flex-shrink: 0;
+
+    .glass-card {
+      background: rgba(255, 255, 255, 0.65);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid rgba(255, 255, 255, 0.38);
     }
-    /* Right form */
-    .auth-card {
-      flex: 1; background: var(--card); padding: 48px 40px;
-      border-radius: 0; max-width: none; box-shadow: none; border: none;
-      display: flex; flex-direction: column; justify-content: center;
+
+    html.dark .glass-card {
+      background: rgba(15, 23, 42, 0.68);
+      border-color: rgba(148, 163, 184, 0.16);
     }
-    .auth-top { margin-bottom: 8px; }
-    .auth-card h2 { font-size: 1.5rem; }
-    /* Dark toggle in corner */
-    .auth-dark-btn {
-      position: fixed; top: 16px; right: 16px;
-      background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3);
-      color: #fff; padding: 6px 14px; border-radius: 20px;
-      cursor: pointer; font-size: 0.78rem; font-weight: 600;
-      backdrop-filter: blur(8px); z-index: 10;
-      transition: background 0.2s;
+
+    .floating-group {
+      position: relative;
     }
-    .auth-dark-btn:hover { background: rgba(255,255,255,0.25); }
-    [data-theme="dark"] .auth-dark-btn { color: #fff; }
-    /* Divider */
-    .auth-divider {
-      display: flex; align-items: center; gap: 12px;
-      margin: 16px 0; color: var(--subtext); font-size: 0.78rem;
+
+    .floating-input,
+    .floating-select {
+      width: 100%;
+      border-radius: 1rem;
+      border: 1px solid rgba(148, 163, 184, 0.38);
+      background: rgba(255, 255, 255, 0.7);
+      padding: 1.2rem 1rem 0.65rem;
+      color: #0f172a;
+      outline: none;
+      transition: 0.25s ease;
     }
-    .auth-divider::before, .auth-divider::after {
-      content: ''; flex: 1; height: 1px; background: var(--border);
+
+    html.dark .floating-input,
+    html.dark .floating-select {
+      background: rgba(15, 23, 42, 0.72);
+      color: #e2e8f0;
+      border-color: rgba(148, 163, 184, 0.22);
     }
-    /* Tab switcher */
-    .auth-tabs {
-      display: flex; background: var(--bg); border-radius: 10px;
-      padding: 4px; margin-bottom: 24px; gap: 4px;
+
+    .floating-input:focus,
+    .floating-select:focus {
+      border-color: rgba(37, 99, 235, 0.8);
+      box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.14);
     }
-    .auth-tab {
-      flex: 1; padding: 9px; border: none; border-radius: 8px;
-      background: transparent; color: var(--subtext); font-size: 0.88rem;
-      font-weight: 600; cursor: pointer; transition: all 0.2s; font-family: inherit;
+
+    .floating-label {
+      position: absolute;
+      left: 1rem;
+      top: 0.95rem;
+      color: #64748b;
+      font-size: 0.92rem;
+      pointer-events: none;
+      transition: 0.2s ease;
+      background: transparent;
     }
-    .auth-tab.active { background: var(--card); color: var(--primary); box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-    /* Hide brand on mobile */
-    @media(max-width: 700px) {
-      .auth-panel { border-radius: 0; margin: 0; max-width: 100%; min-height: 100vh; }
-      .auth-brand { display: none; }
-      .auth-card { padding: 40px 24px; border-radius: 0; }
+
+    html.dark .floating-label {
+      color: #94a3b8;
     }
-    @media(max-width: 480px) {
-      .auth-card { padding: 32px 20px; }
+
+    .floating-input:focus + .floating-label,
+    .floating-input:not(:placeholder-shown) + .floating-label,
+    .floating-select:focus + .floating-label,
+    .floating-select.has-value + .floating-label {
+      transform: translateY(-0.72rem) scale(0.84);
+      color: #2563eb;
+      font-weight: 600;
+    }
+
+    .floating-input::placeholder {
+      color: transparent;
+    }
+
+    .gradient-btn {
+      background-size: 200% 200%;
+      background-image: linear-gradient(120deg, #2563eb, #06b6d4, #8b5cf6, #ec4899);
+    }
+
+    .strength-bar span {
+      flex: 1;
+      height: 0.4rem;
+      border-radius: 999px;
+      background: rgba(148, 163, 184, 0.28);
+      transition: 0.25s ease;
+    }
+
+    .strength-bar span.active-1 { background: #ef4444; }
+    .strength-bar span.active-2 { background: #f59e0b; }
+    .strength-bar span.active-3 { background: #22c55e; }
+    .strength-bar span.active-4 { background: #10b981; }
+
+    .upload-ring {
+      background:
+        linear-gradient(rgba(255,255,255,0.75), rgba(255,255,255,0.75)) padding-box,
+        linear-gradient(135deg, rgba(37,99,235,0.9), rgba(236,72,153,0.8)) border-box;
+      border: 2px solid transparent;
+    }
+
+    html.dark .upload-ring {
+      background:
+        linear-gradient(rgba(15,23,42,0.9), rgba(15,23,42,0.9)) padding-box,
+        linear-gradient(135deg, rgba(34,211,238,0.9), rgba(168,85,247,0.9)) border-box;
+    }
+
+    .spinner {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      border: 4px solid rgba(255, 255, 255, 0.28);
+      border-top-color: #fff;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .assistant-orb {
+      box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.35);
     }
   </style>
 </head>
-<body>
-<button class="auth-dark-btn" id="darkToggleBtn">🌙 Dark</button>
-
-<div class="auth-wrap">
-  <div class="auth-panel">
-    <!-- Branding -->
-    <div class="auth-brand">
-      <div class="brand-icon">📚</div>
-      <div>
-        <h1>SGPA & CGPA Calculator</h1>
-        <p>Track your academic performance with ease. Built for JNTUGV R23 regulation students.</p>
-      </div>
-      <div class="brand-features">
-        <div class="feat"><div class="feat-icon">📊</div> Calculate SGPA per semester</div>
-        <div class="feat"><div class="feat-icon">🎯</div> Track CGPA across all semesters</div>
-        <div class="feat"><div class="feat-icon">📈</div> Visual performance trends</div>
-        <div class="feat"><div class="feat-icon">☁️</div> Sync data across devices</div>
-      </div>
-    </div>
-
-    <!-- Form -->
-    <div class="auth-card">
-      <div class="auth-top">
-        <h2>&#127891; Welcome back</h2>
-      </div>
-      <p class="subtitle" id="authSubtitle">Sign in to continue</p>
-
-      <div class="auth-tabs">
-        <button class="auth-tab active" id="tabLogin">Sign In</button>
-        <button class="auth-tab" id="tabSignup">Sign Up</button>
-      </div>
-
-      <!-- Login -->
-      <div id="loginForm">
-        <div class="form-group">
-          <label>Email</label>
-          <input type="email" id="loginEmail" placeholder="you@example.com"/>
-        </div>
-        <div class="form-group">
-          <label>Password</label>
-          <input type="password" id="loginPassword" placeholder="Enter your password"/>
-        </div>
-        <div id="loginError" class="error"></div>
-        <button class="btn btn-primary btn-full" id="loginBtn" style="margin-top:4px;">Sign In</button>
-        <div class="auth-divider">or</div>
-        <button class="btn btn-google" id="googleLoginBtn">
-          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18" alt="G"/>
-          Continue with Google
-        </button>
-      </div>
-
-      <!-- Signup -->
-      <div id="signupForm" style="display:none;">
-        <div class="form-group">
-          <label>Full Name</label>
-          <input type="text" id="signupName" placeholder="Your Name"/>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-          <div class="form-group">
-            <label>Roll Number</label>
-            <input type="text" id="signupRoll" placeholder="Roll No"/>
-          </div>
-          <div class="form-group">
-            <label>Branch</label>
-            <input type="text" id="signupBranch" placeholder="Branch"/>
-          </div>
-        </div>
-        <div class="form-group">
-          <label>Email</label>
-          <input type="email" id="signupEmail" placeholder="you@example.com"/>
-        </div>
-        <div class="form-group">
-          <label>Password</label>
-          <input type="password" id="signupPassword" placeholder="Min 6 characters"/>
-        </div>
-        <div id="signupError" class="error"></div>
-        <button class="btn btn-primary btn-full" id="signupBtn" style="margin-top:4px;">Create Account</button>
-        <div class="auth-divider">or</div>
-        <button class="btn btn-google" id="googleSignupBtn">
-          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18" alt="G"/>
-          Continue with Google
-        </button>
-      </div>
+<body class="font-sans text-slate-900 dark:text-slate-100">
+  <div id="loadingOverlay" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/65 backdrop-blur-sm">
+    <div class="flex flex-col items-center gap-4 text-white">
+      <div class="spinner"></div>
+      <p class="text-sm font-medium tracking-wide" id="loadingMessage">Setting things up...</p>
     </div>
   </div>
-</div>
 
-<script type="module">
-  import { redirectIfLoggedIn, signUp, signIn, googleSignIn, friendlyError, initDarkMode, toggleDark } from "./app.js";
-  initDarkMode();
-  redirectIfLoggedIn();
+  <button
+    id="assistantFab"
+    class="assistant-orb fixed bottom-5 right-5 z-40 flex items-center gap-3 rounded-full border border-sky-300/40 bg-slate-950 px-4 py-3 text-sm font-semibold text-white shadow-2xl shadow-sky-500/20 transition hover:-translate-y-1 dark:bg-sky-400 dark:text-slate-950"
+    type="button"
+  >
+    <span class="flex h-10 w-10 animate-pulseGlow items-center justify-center rounded-full bg-gradient-to-br from-sky-400 to-fuchsia-500 text-white dark:text-slate-950">
+      <i class="fa-solid fa-wand-magic-sparkles"></i>
+    </span>
+    <span>AI Academic Assistant</span>
+  </button>
 
-  document.getElementById("darkToggleBtn").addEventListener("click", toggleDark);
+  <main class="relative overflow-hidden px-4 py-6 sm:px-6 lg:px-8">
+    <div class="mx-auto flex min-h-[calc(100vh-3rem)] max-w-7xl flex-col gap-6 lg:flex-row">
+      <section class="relative flex flex-1 flex-col justify-between overflow-hidden rounded-[2rem] border border-white/30 bg-slate-950 px-6 py-6 text-white shadow-glow sm:px-8 lg:px-10">
+        <div class="absolute -left-16 top-8 h-40 w-40 rounded-full bg-cyan-400/20 blur-3xl"></div>
+        <div class="absolute bottom-0 right-0 h-56 w-56 rounded-full bg-fuchsia-500/20 blur-3xl"></div>
 
-  const switchForm = mode => {
-    const login = mode === "login";
-    document.getElementById("loginForm").style.display  = login ? "" : "none";
-    document.getElementById("signupForm").style.display = login ? "none" : "";
-    document.getElementById("authSubtitle").textContent = login ? "Sign in to continue" : "Create your account";
-    document.getElementById("loginError").textContent   = "";
-    document.getElementById("signupError").textContent  = "";
-    document.getElementById("tabLogin").classList.toggle("active", login);
-    document.getElementById("tabSignup").classList.toggle("active", !login);
-  };
+        <div class="relative z-10 flex items-start justify-between gap-4">
+          <div>
+            <div class="mb-4 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.28em] text-cyan-100">
+              <i class="fa-solid fa-graduation-cap"></i>
+              Student Onboarding
+            </div>
+            <h1 class="max-w-xl text-3xl font-extrabold leading-tight sm:text-4xl">
+              Create your academic dashboard with a modern, secure signup flow.
+            </h1>
+            <p class="mt-4 max-w-xl text-sm leading-7 text-slate-200/85 sm:text-base">
+              Register once, verify your phone with OTP, upload your profile image, and step into a responsive dashboard built for SGPA and CGPA tracking.
+            </p>
+          </div>
 
-  document.getElementById("tabLogin").addEventListener("click",  () => switchForm("login"));
-  document.getElementById("tabSignup").addEventListener("click", () => switchForm("signup"));
+          <button
+            id="themeToggle"
+            class="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/15"
+            type="button"
+          >
+            <i class="fa-solid fa-moon"></i>
+            <span>Dark</span>
+          </button>
+        </div>
 
-  const handleLogin = async () => {
-    const email = document.getElementById("loginEmail").value.trim();
-    const pass  = document.getElementById("loginPassword").value;
-    const err   = document.getElementById("loginError");
-    err.textContent = "";
-    if (!email || !pass) { err.textContent = "Please fill in all fields."; return; }
-    const btn = document.getElementById("loginBtn");
-    btn.textContent = "Signing in…"; btn.disabled = true;
-    try { await signIn(email, pass); location.href = "dashboard.html"; }
-    catch(e) { err.textContent = friendlyError(e.code); btn.textContent = "Sign In"; btn.disabled = false; }
-  };
+        <div class="relative z-10 mt-10 grid gap-4 sm:grid-cols-2">
+          <div class="glass-card rounded-3xl p-5 text-slate-900 dark:text-slate-100">
+            <div class="mb-3 flex items-center gap-3">
+              <div class="flex h-12 w-12 animate-floaty items-center justify-center rounded-2xl bg-gradient-to-br from-sky-400 to-blue-600 text-lg text-white">
+                <i class="fa-solid fa-shield-heart"></i>
+              </div>
+              <div>
+                <p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500 dark:text-slate-400">Secure Flow</p>
+                <h2 class="text-lg font-bold">Firebase Auth + OTP</h2>
+              </div>
+            </div>
+            <p class="text-sm leading-6 text-slate-600 dark:text-slate-300">
+              Email signup, verified phone number, and profile data saved to Firebase in one guided experience.
+            </p>
+          </div>
 
-  const handleSignup = async () => {
-    const name   = document.getElementById("signupName").value.trim();
-    const roll   = document.getElementById("signupRoll").value.trim();
-    const branch = document.getElementById("signupBranch").value.trim();
-    const email  = document.getElementById("signupEmail").value.trim();
-    const pass   = document.getElementById("signupPassword").value;
-    const err    = document.getElementById("signupError");
-    err.textContent = "";
-    if (!name || !roll || !branch || !email || !pass) { err.textContent = "Please fill in all fields."; return; }
-    if (pass.length < 6) { err.textContent = "Password must be at least 6 characters."; return; }
-    const btn = document.getElementById("signupBtn");
-    btn.textContent = "Creating…"; btn.disabled = true;
-    try { await signUp(name, email, pass, roll, branch); location.href = "dashboard.html"; }
-    catch(e) { err.textContent = friendlyError(e.code); btn.textContent = "Create Account"; btn.disabled = false; }
-  };
+          <div class="glass-card rounded-3xl p-5 text-slate-900 dark:text-slate-100">
+            <div class="mb-3 flex items-center gap-3">
+              <div class="flex h-12 w-12 animate-floaty items-center justify-center rounded-2xl bg-gradient-to-br from-fuchsia-500 to-violet-600 text-lg text-white">
+                <i class="fa-solid fa-chart-line"></i>
+              </div>
+              <div>
+                <p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500 dark:text-slate-400">Student Ready</p>
+                <h2 class="text-lg font-bold">Dashboard-Style UI</h2>
+              </div>
+            </div>
+            <p class="text-sm leading-6 text-slate-600 dark:text-slate-300">
+              A glassmorphism layout, branch detection, password insights, and mobile-first form behavior.
+            </p>
+          </div>
+        </div>
 
-  document.getElementById("loginBtn").addEventListener("click", handleLogin);
-  document.getElementById("signupBtn").addEventListener("click", handleSignup);
-  document.getElementById("googleLoginBtn").addEventListener("click", async () => {
-    try { await googleSignIn(); location.href = "dashboard.html"; }
-    catch(e) { document.getElementById("loginError").textContent = friendlyError(e.code); }
-  });
-  document.getElementById("googleSignupBtn").addEventListener("click", async () => {
-    try { await googleSignIn(); location.href = "dashboard.html"; }
-    catch(e) { document.getElementById("signupError").textContent = friendlyError(e.code); }
-  });
+        <div class="relative z-10 mt-8 grid gap-3 text-sm text-slate-200/90 sm:grid-cols-3">
+          <div class="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <p class="font-semibold">Auto Branch Detection</p>
+            <p class="mt-2 text-slate-300">Reads hall ticket patterns and suggests the branch instantly.</p>
+          </div>
+          <div class="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <p class="font-semibold">Responsive Design</p>
+            <p class="mt-2 text-slate-300">Optimized for mobile screens, tablets, and laptops.</p>
+          </div>
+          <div class="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <p class="font-semibold">Academic Companion</p>
+            <p class="mt-2 text-slate-300">A smart button for branch-aware onboarding guidance.</p>
+          </div>
+        </div>
+      </section>
 
-  document.addEventListener("keydown", e => {
-    if (e.key !== "Enter") return;
-    const loginVisible = document.getElementById("loginForm").style.display !== "none";
-    loginVisible ? handleLogin() : handleSignup();
-  });
-</script>
+      <section class="glass-card w-full max-w-3xl rounded-[2rem] px-4 py-5 shadow-2xl shadow-slate-900/10 sm:px-6 sm:py-6 lg:px-8">
+        <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p class="text-xs font-semibold uppercase tracking-[0.28em] text-sky-600 dark:text-sky-300">Student Portal</p>
+            <h2 class="mt-2 text-2xl font-extrabold text-slate-900 dark:text-white">Create your account</h2>
+            <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">Join the SGPA & CGPA workspace with secure verification and a polished signup flow.</p>
+          </div>
+          <div class="inline-flex rounded-2xl border border-white/30 bg-white/40 p-1 dark:border-slate-700/80 dark:bg-slate-900/50">
+            <button id="signupTab" class="rounded-2xl px-4 py-2 text-sm font-semibold text-slate-600 transition hover:text-slate-900 dark:text-slate-300 dark:hover:text-white" type="button">Sign Up</button>
+            <button id="loginTab" class="rounded-2xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white dark:bg-sky-400 dark:text-slate-950" type="button">Sign In</button>
+          </div>
+        </div>
+
+        <p id="authModeHint" class="mb-4 text-sm text-slate-500 dark:text-slate-400">
+          Existing account? Sign in with your email and password, or continue with Google.
+        </p>
+
+        <div id="authAlert" class="mb-4 hidden rounded-2xl border px-4 py-3 text-sm"></div>
+
+        <div id="signupView" class="hidden">
+          <form id="signupForm" class="grid gap-4 md:grid-cols-2">
+            <div class="floating-group md:col-span-2">
+              <input class="floating-input" id="fullName" type="text" placeholder="Full Name" />
+              <label class="floating-label" for="fullName">Full Name</label>
+            </div>
+
+            <div class="floating-group">
+              <input class="floating-input" id="email" type="email" placeholder="Email" />
+              <label class="floating-label" for="email">Email Address</label>
+            </div>
+
+            <div class="floating-group">
+              <input class="floating-input" id="phone" type="tel" maxlength="10" inputmode="numeric" placeholder="Phone Number" />
+              <label class="floating-label" for="phone">Phone Number</label>
+            </div>
+
+            <div class="floating-group">
+              <input class="floating-input" id="hallTicket" type="text" placeholder="Hall Ticket Number" />
+              <label class="floating-label" for="hallTicket">Hall Ticket Number</label>
+            </div>
+
+            <div class="floating-group">
+              <input class="floating-input" id="branch" type="text" list="branchOptions" placeholder="Branch" />
+              <label class="floating-label" for="branch">Branch</label>
+            </div>
+            <datalist id="branchOptions">
+              <option value="Computer Science and Engineering"></option>
+              <option value="Computer Science and Engineering (AI & ML)"></option>
+              <option value="Computer Science and Engineering (Data Science)"></option>
+              <option value="Computer Science and Engineering (Cyber Security)"></option>
+              <option value="Computer Science and Engineering (IoT)"></option>
+              <option value="Artificial Intelligence and Machine Learning"></option>
+              <option value="Artificial Intelligence and Data Science"></option>
+              <option value="Information Technology"></option>
+              <option value="Electronics and Communication Engineering"></option>
+              <option value="Electrical and Electronics Engineering"></option>
+              <option value="Electronics and Instrumentation Engineering"></option>
+              <option value="Mechanical Engineering"></option>
+              <option value="Civil Engineering"></option>
+              <option value="Chemical Engineering"></option>
+              <option value="Biotechnology"></option>
+              <option value="Biomedical Engineering"></option>
+              <option value="Agricultural Engineering"></option>
+              <option value="Aeronautical Engineering"></option>
+              <option value="Automobile Engineering"></option>
+              <option value="Mining Engineering"></option>
+              <option value="Petroleum Engineering"></option>
+              <option value="Robotics and Automation"></option>
+              <option value="Mechatronics Engineering"></option>
+              <option value="Computer Science and Business Systems"></option>
+              <option value="Master of Business Administration"></option>
+              <option value="Master of Computer Applications"></option>
+              <option value="Diploma in Computer Engineering"></option>
+              <option value="Diploma in Electronics and Communication Engineering"></option>
+              <option value="Diploma in Mechanical Engineering"></option>
+              <option value="Diploma in Civil Engineering"></option>
+              <option value="Other"></option>
+            </datalist>
+
+            <div class="rounded-3xl border border-slate-200/70 bg-white/45 p-4 dark:border-slate-700/70 dark:bg-slate-900/35 md:col-span-2">
+              <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p class="text-sm font-semibold text-slate-800 dark:text-slate-100">Detected branch and hall ticket status</p>
+                  <p class="mt-1 text-xs text-slate-500 dark:text-slate-400" id="branchHint">Enter your hall ticket number to auto-detect branch details.</p>
+                </div>
+                <span id="hallTicketBadge" class="inline-flex rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold text-white dark:bg-sky-400 dark:text-slate-950">Waiting</span>
+              </div>
+            </div>
+
+            <div class="floating-group">
+              <select class="floating-select" id="regulation">
+                <option value=""></option>
+                <option value="R23">R23</option>
+                <option value="R20">R20</option>
+                <option value="R19">R19</option>
+                <option value="R16">R16</option>
+              </select>
+              <label class="floating-label" for="regulation">Regulation</label>
+            </div>
+
+            <div class="floating-group">
+              <select class="floating-select" id="joiningYear">
+                <option value=""></option>
+              </select>
+              <label class="floating-label" for="joiningYear">Year of Joining</label>
+            </div>
+
+            <div class="floating-group">
+              <input class="floating-input" id="password" type="password" placeholder="Password" />
+              <label class="floating-label" for="password">Password</label>
+            </div>
+
+            <div class="floating-group">
+              <input class="floating-input" id="confirmPassword" type="password" placeholder="Confirm Password" />
+              <label class="floating-label" for="confirmPassword">Confirm Password</label>
+            </div>
+
+            <div class="md:col-span-2 rounded-3xl border border-slate-200/70 bg-white/45 p-4 dark:border-slate-700/70 dark:bg-slate-900/35">
+              <div class="flex items-center justify-between gap-3">
+                <div>
+                  <p class="text-sm font-semibold text-slate-800 dark:text-slate-100">Password strength</p>
+                  <p class="text-xs text-slate-500 dark:text-slate-400" id="passwordLabel">Use 8+ characters with upper, lower, number, and symbol.</p>
+                </div>
+                <span id="passwordBadge" class="rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold text-white dark:bg-sky-400 dark:text-slate-950">Weak</span>
+              </div>
+              <div class="strength-bar mt-4 flex gap-2">
+                <span></span>
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+            </div>
+
+            <div class="md:col-span-2 rounded-[1.75rem] border border-dashed border-slate-300/80 p-4 dark:border-slate-600/70">
+              <div class="flex flex-col gap-4 sm:flex-row sm:items-center">
+                <label for="profileImage" class="upload-ring flex h-24 w-24 cursor-pointer items-center justify-center overflow-hidden rounded-[1.5rem]">
+                  <img id="profilePreview" class="hidden h-full w-full object-cover" alt="Profile Preview" />
+                  <span id="profilePlaceholder" class="text-center text-xs font-semibold text-slate-500 dark:text-slate-300">
+                    <i class="fa-regular fa-image mb-2 block text-2xl"></i>
+                    Upload
+                  </span>
+                </label>
+                <div class="flex-1">
+                  <p class="text-sm font-semibold text-slate-800 dark:text-slate-100">Profile image upload</p>
+                  <p class="mt-1 text-xs leading-6 text-slate-500 dark:text-slate-400">PNG or JPG up to 2 MB. Your image will be stored in Firebase Storage after signup.</p>
+                  <div class="mt-3 flex flex-wrap gap-3">
+                    <label for="profileImage" class="inline-flex cursor-pointer items-center gap-2 rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white transition hover:-translate-y-0.5 dark:bg-sky-400 dark:text-slate-950">
+                      <i class="fa-solid fa-cloud-arrow-up"></i>
+                      Choose Image
+                    </label>
+                    <button id="removeImageBtn" class="hidden rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-slate-900 hover:text-slate-900 dark:border-slate-600 dark:text-slate-200 dark:hover:border-white dark:hover:text-white" type="button">
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <input id="profileImage" class="hidden" type="file" accept="image/png,image/jpeg,image/jpg" />
+            </div>
+
+            <label class="md:col-span-2 flex items-start gap-3 rounded-3xl border border-slate-200/70 bg-white/45 p-4 text-sm text-slate-600 dark:border-slate-700/70 dark:bg-slate-900/35 dark:text-slate-300">
+              <input id="terms" class="mt-1 h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500" type="checkbox" />
+              <span>I agree to the terms and conditions, privacy policy, and secure academic profile storage for this dashboard.</span>
+            </label>
+
+            <div class="md:col-span-2 flex flex-col gap-3 sm:flex-row">
+              <button id="signupBtn" class="gradient-btn animate-shimmer flex-1 rounded-2xl px-6 py-4 text-sm font-bold text-white shadow-xl shadow-blue-500/20 transition hover:-translate-y-1" type="submit">
+                Create Student Account
+              </button>
+              <button id="googleSignupBtn" class="flex items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white px-6 py-4 text-sm font-semibold text-slate-700 transition hover:-translate-y-1 hover:border-slate-950 dark:border-slate-600 dark:bg-slate-900/60 dark:text-slate-100 dark:hover:border-white" type="button">
+                <i class="fa-brands fa-google"></i>
+                Continue with Google
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <div id="loginView" class="hidden">
+          <form id="loginForm" class="grid gap-4">
+            <div class="floating-group">
+              <input class="floating-input" id="loginEmail" type="email" placeholder="Email" />
+              <label class="floating-label" for="loginEmail">Email Address</label>
+            </div>
+            <div class="floating-group">
+              <input class="floating-input" id="loginPassword" type="password" placeholder="Password" />
+              <label class="floating-label" for="loginPassword">Password</label>
+            </div>
+            <button id="loginBtn" class="gradient-btn animate-shimmer rounded-2xl px-6 py-4 text-sm font-bold text-white shadow-xl shadow-blue-500/20 transition hover:-translate-y-1" type="submit">
+              Sign In
+            </button>
+            <button id="googleLoginBtn" class="flex items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white px-6 py-4 text-sm font-semibold text-slate-700 transition hover:-translate-y-1 hover:border-slate-950 dark:border-slate-600 dark:bg-slate-900/60 dark:text-slate-100 dark:hover:border-white" type="button">
+              <i class="fa-brands fa-google"></i>
+              Continue with Google
+            </button>
+          </form>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <dialog id="assistantDialog" class="glass-card w-[min(92vw,32rem)] rounded-[2rem] border border-white/40 p-0 text-slate-900 shadow-2xl backdrop:bg-slate-950/55 dark:text-white dark:backdrop:bg-slate-950/70">
+    <div class="p-6">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-[0.28em] text-sky-600 dark:text-sky-300">Preview</p>
+          <h3 class="mt-2 text-xl font-bold">Academic Assistant</h3>
+        </div>
+        <button id="closeAssistant" class="rounded-full bg-slate-900 px-3 py-2 text-sm font-semibold text-white dark:bg-sky-400 dark:text-slate-950" type="button">Close</button>
+      </div>
+      <div id="assistantContent" class="mt-5 space-y-3 text-sm leading-7 text-slate-600 dark:text-slate-300">
+        <p>Fill in your branch, regulation, and joining year to get a personalized onboarding summary.</p>
+      </div>
+    </div>
+  </dialog>
+
+  <script type="module">
+    import { auth } from "./firebase-config.js";
+    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import {
+      signUp,
+      signIn,
+      googleSignIn,
+      friendlyError,
+      initDarkMode,
+      toggleDark,
+      uploadProfileImage,
+      saveUserProfile,
+      updateUserProfile
+    } from "./app.js";
+
+    initDarkMode();
+    onAuthStateChanged(auth, user => {
+      if (user && user.email) {
+        window.location.href = "dashboard.html";
+      }
+    });
+
+    const elements = {
+      authAlert: document.getElementById("authAlert"),
+      signupView: document.getElementById("signupView"),
+      loginView: document.getElementById("loginView"),
+      signupTab: document.getElementById("signupTab"),
+      loginTab: document.getElementById("loginTab"),
+      authModeHint: document.getElementById("authModeHint"),
+      themeToggle: document.getElementById("themeToggle"),
+      loadingOverlay: document.getElementById("loadingOverlay"),
+      loadingMessage: document.getElementById("loadingMessage"),
+      password: document.getElementById("password"),
+      confirmPassword: document.getElementById("confirmPassword"),
+      passwordLabel: document.getElementById("passwordLabel"),
+      passwordBadge: document.getElementById("passwordBadge"),
+      strengthBars: Array.from(document.querySelectorAll(".strength-bar span")),
+      hallTicket: document.getElementById("hallTicket"),
+      branch: document.getElementById("branch"),
+      branchHint: document.getElementById("branchHint"),
+      hallTicketBadge: document.getElementById("hallTicketBadge"),
+      regulation: document.getElementById("regulation"),
+      joiningYear: document.getElementById("joiningYear"),
+      phone: document.getElementById("phone"),
+      profileImage: document.getElementById("profileImage"),
+      profilePreview: document.getElementById("profilePreview"),
+      profilePlaceholder: document.getElementById("profilePlaceholder"),
+      removeImageBtn: document.getElementById("removeImageBtn"),
+      assistantFab: document.getElementById("assistantFab"),
+      assistantDialog: document.getElementById("assistantDialog"),
+      assistantContent: document.getElementById("assistantContent"),
+      closeAssistant: document.getElementById("closeAssistant")
+    };
+
+    const branchMap = {
+      CSE: "Computer Science and Engineering",
+      CSC: "Computer Science and Engineering",
+      CSM: "Computer Science and Engineering (AI & ML)",
+      CSM1: "Computer Science and Engineering (AI & ML)",
+      CSD: "Computer Science and Engineering (Data Science)",
+      CSB: "Computer Science and Business Systems",
+      CSBS: "Computer Science and Business Systems",
+      CSI: "Computer Science and Engineering (IoT)",
+      CSO: "Computer Science and Engineering (IoT)",
+      CSG: "Computer Science and Engineering (Cyber Security)",
+      CYB: "Computer Science and Engineering (Cyber Security)",
+      IT: "Information Technology",
+      ECE: "Electronics and Communication Engineering",
+      EEE: "Electrical and Electronics Engineering",
+      EIE: "Electronics and Instrumentation Engineering",
+      MEC: "Mechanical Engineering",
+      ME: "Mechanical Engineering",
+      CIV: "Civil Engineering",
+      CE: "Civil Engineering",
+      CHE: "Chemical Engineering",
+      CH: "Chemical Engineering",
+      BME: "Biomedical Engineering",
+      BIO: "Biotechnology",
+      BT: "Biotechnology",
+      AGR: "Agricultural Engineering",
+      AE: "Aeronautical Engineering",
+      AUTO: "Automobile Engineering",
+      MIN: "Mining Engineering",
+      PE: "Petroleum Engineering",
+      RBT: "Robotics and Automation",
+      MECA: "Mechatronics Engineering",
+      AIM: "Artificial Intelligence and Machine Learning",
+      AIDS: "Artificial Intelligence and Data Science",
+      MBA: "Master of Business Administration",
+      MCA: "Master of Computer Applications",
+      A1: "Civil Engineering",
+      A2: "Electrical and Electronics Engineering",
+      A3: "Mechanical Engineering",
+      A4: "Electronics and Communication Engineering",
+      A5: "Computer Science and Engineering",
+      C5: "Artificial Intelligence and Machine Learning",
+      D4: "Data Science",
+      D5: "Artificial Intelligence and Data Science"
+    };
+
+    const state = {
+      imageFile: null
+    };
+
+    populateYears();
+    bindFloatingSelects();
+    updatePasswordStrength();
+
+    elements.themeToggle.addEventListener("click", () => {
+      toggleDark();
+      syncTheme();
+    });
+
+    elements.signupTab.addEventListener("click", () => switchView("signup"));
+    elements.loginTab.addEventListener("click", () => switchView("login"));
+    elements.password.addEventListener("input", updatePasswordStrength);
+    elements.confirmPassword.addEventListener("input", validatePasswordMatchHint);
+    elements.hallTicket.addEventListener("input", detectBranchFromHallTicket);
+    elements.branch.addEventListener("input", updateAssistantContent);
+    elements.regulation.addEventListener("change", updateAssistantContent);
+    elements.joiningYear.addEventListener("change", updateAssistantContent);
+    elements.profileImage.addEventListener("change", handleImagePreview);
+    elements.removeImageBtn.addEventListener("click", clearImagePreview);
+    elements.assistantFab.addEventListener("click", openAssistant);
+    elements.closeAssistant.addEventListener("click", () => elements.assistantDialog.close());
+    document.getElementById("googleSignupBtn").addEventListener("click", handleGoogleSignIn);
+    document.getElementById("googleLoginBtn").addEventListener("click", handleGoogleSignIn);
+    document.getElementById("signupForm").addEventListener("submit", handleSignup);
+    document.getElementById("loginForm").addEventListener("submit", handleLogin);
+
+    switchView("login");
+
+    function syncTheme() {
+      const theme = document.documentElement.getAttribute("data-theme") || "light";
+      document.documentElement.classList.toggle("dark", theme === "dark");
+      const icon = theme === "dark" ? "fa-sun" : "fa-moon";
+      const label = theme === "dark" ? "Light" : "Dark";
+      elements.themeToggle.innerHTML = `<i class="fa-solid ${icon}"></i><span>${label}</span>`;
+    }
+
+    function switchView(mode) {
+      const isSignup = mode === "signup";
+      elements.signupView.classList.toggle("hidden", !isSignup);
+      elements.loginView.classList.toggle("hidden", isSignup);
+      elements.authModeHint.innerHTML = isSignup
+        ? 'New student? Create an account. Already registered? Use <strong>Sign In</strong>.'
+        : 'Existing account? Sign in with your email and password, or continue with Google.';
+      elements.signupTab.className = isSignup
+        ? "rounded-2xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white dark:bg-sky-400 dark:text-slate-950"
+        : "rounded-2xl px-4 py-2 text-sm font-semibold text-slate-600 transition hover:text-slate-900 dark:text-slate-300 dark:hover:text-white";
+      elements.loginTab.className = !isSignup
+        ? "rounded-2xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white dark:bg-sky-400 dark:text-slate-950"
+        : "rounded-2xl px-4 py-2 text-sm font-semibold text-slate-600 transition hover:text-slate-900 dark:text-slate-300 dark:hover:text-white";
+      clearAlert();
+    }
+
+    function populateYears() {
+      const currentYear = new Date().getFullYear();
+      for (let year = currentYear; year >= currentYear - 12; year -= 1) {
+        const option = document.createElement("option");
+        option.value = String(year);
+        option.textContent = String(year);
+        elements.joiningYear.appendChild(option);
+      }
+    }
+
+    function bindFloatingSelects() {
+      document.querySelectorAll(".floating-select").forEach(select => {
+        const sync = () => select.classList.toggle("has-value", Boolean(select.value));
+        select.addEventListener("change", sync);
+        sync();
+      });
+    }
+
+    function updatePasswordStrength() {
+      const value = elements.password.value;
+      let score = 0;
+      if (value.length >= 8) score += 1;
+      if (/[A-Z]/.test(value) && /[a-z]/.test(value)) score += 1;
+      if (/\d/.test(value)) score += 1;
+      if (/[^A-Za-z0-9]/.test(value)) score += 1;
+
+      const labels = ["Weak", "Fair", "Good", "Strong"];
+      const helperText = [
+        "Use 8+ characters with upper, lower, number, and symbol.",
+        "Add more variety to make it stronger.",
+        "Nice. Add a symbol or longer phrase for extra security.",
+        "Excellent password strength."
+      ];
+
+      elements.passwordBadge.textContent = labels[Math.max(score - 1, 0)];
+      elements.passwordLabel.textContent = helperText[Math.max(score - 1, 0)];
+
+      elements.strengthBars.forEach((bar, index) => {
+        bar.className = "";
+        if (index < score) {
+          const level = Math.min(score, 4);
+          bar.classList.add(`active-${level}`);
+        }
+      });
+
+      validatePasswordMatchHint();
+    }
+
+    function validatePasswordMatchHint() {
+      if (!elements.confirmPassword.value) return;
+      if (elements.password.value === elements.confirmPassword.value) return;
+      showAlert("Passwords do not match yet.", "warning");
+    }
+
+    function normalizeHallTicket(value) {
+      return value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+    }
+
+    function detectBranchFromHallTicket() {
+      const raw = normalizeHallTicket(elements.hallTicket.value);
+      const branchToken = Object.keys(branchMap).find(code => raw.includes(code));
+      const isValid = /^[A-Z0-9]{8,15}$/.test(raw);
+
+      elements.hallTicket.value = raw;
+      if (branchToken) {
+        elements.branch.value = branchMap[branchToken];
+        elements.branchHint.textContent = `Detected branch from token "${branchToken}" in the hall ticket number.`;
+      } else if (isValid) {
+        elements.branchHint.textContent = "Hall ticket looks valid, but branch could not be detected automatically. Please confirm manually.";
+      } else {
+        elements.branchHint.textContent = "Enter your hall ticket number to auto-detect branch details.";
+      }
+
+      elements.hallTicketBadge.textContent = isValid ? "Valid format" : "Check format";
+      elements.hallTicketBadge.className = isValid
+        ? "inline-flex rounded-full bg-emerald-500 px-3 py-1 text-xs font-semibold text-white"
+        : "inline-flex rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold text-white dark:bg-sky-400 dark:text-slate-950";
+
+      updateAssistantContent();
+    }
+
+    function formatPhone(phone) {
+      const digits = phone.replace(/\D/g, "");
+      if (digits.length === 10) return `+91${digits}`;
+      if (digits.startsWith("91") && digits.length === 12) return `+${digits}`;
+      if (digits.startsWith("0") && digits.length === 11) return `+91${digits.slice(1)}`;
+      return "";
+    }
+
+    function validateForm() {
+      const data = getSignupData();
+      if (!data.name || !data.email || !data.password || !data.confirmPassword || !data.hallTicket || !data.branch || !data.regulation || !data.joiningYear || !data.phone) {
+        return "Please fill in all required fields.";
+      }
+      if (!state.imageFile) {
+        return "Please upload your profile photo.";
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
+        return "Enter a valid email address.";
+      }
+      if (!/^[A-Z0-9]{8,15}$/.test(data.hallTicket)) {
+        return "Enter a valid hall ticket number.";
+      }
+      if (!formatPhone(data.phone)) {
+        return "Enter a valid 10-digit phone number.";
+      }
+      if (data.password.length < 8) {
+        return "Password must be at least 8 characters.";
+      }
+      if (data.password !== data.confirmPassword) {
+        return "Passwords do not match.";
+      }
+      if (!document.getElementById("terms").checked) {
+        return "Please accept the terms and conditions.";
+      }
+      return "";
+    }
+
+    function getSignupData() {
+      return {
+        name: document.getElementById("fullName").value.trim(),
+        email: document.getElementById("email").value.trim(),
+        password: elements.password.value,
+        confirmPassword: elements.confirmPassword.value,
+        hallTicket: normalizeHallTicket(elements.hallTicket.value),
+        branch: elements.branch.value.trim(),
+        regulation: elements.regulation.value,
+        joiningYear: elements.joiningYear.value,
+        phone: elements.phone.value.trim()
+      };
+    }
+
+    function setLoading(isLoading, message = "Please wait...") {
+      elements.loadingMessage.textContent = message;
+      elements.loadingOverlay.classList.toggle("hidden", !isLoading);
+      elements.loadingOverlay.classList.toggle("flex", isLoading);
+    }
+
+    function showAlert(message, tone = "error") {
+      const styles = {
+        error: "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-900/70 dark:bg-rose-950/40 dark:text-rose-200",
+        success: "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/70 dark:bg-emerald-950/40 dark:text-emerald-200",
+        warning: "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/70 dark:bg-amber-950/40 dark:text-amber-200"
+      };
+      elements.authAlert.className = `mb-4 rounded-2xl border px-4 py-3 text-sm ${styles[tone] || styles.error}`;
+      elements.authAlert.textContent = message;
+      elements.authAlert.classList.remove("hidden");
+    }
+
+    function clearAlert() {
+      elements.authAlert.classList.add("hidden");
+      elements.authAlert.textContent = "";
+    }
+
+    function handleImagePreview(event) {
+      const [file] = event.target.files || [];
+      if (!file) return;
+      if (file.size > 2 * 1024 * 1024) {
+        clearImagePreview();
+        showAlert("Please choose an image smaller than 2 MB.", "warning");
+        return;
+      }
+
+      state.imageFile = file;
+      const reader = new FileReader();
+      reader.onload = () => {
+        elements.profilePreview.src = reader.result;
+        elements.profilePreview.classList.remove("hidden");
+        elements.profilePlaceholder.classList.add("hidden");
+        elements.removeImageBtn.classList.remove("hidden");
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function clearImagePreview() {
+      state.imageFile = null;
+      elements.profileImage.value = "";
+      elements.profilePreview.src = "";
+      elements.profilePreview.classList.add("hidden");
+      elements.profilePlaceholder.classList.remove("hidden");
+      elements.removeImageBtn.classList.add("hidden");
+    }
+
+    async function handleSignup(event) {
+      event.preventDefault();
+      clearAlert();
+
+      const validationMessage = validateForm();
+      if (validationMessage) {
+        showAlert(validationMessage, "warning");
+        return;
+      }
+
+      const data = getSignupData();
+      setLoading(true, "Creating your student account...");
+
+      try {
+        const user = await signUp(
+          data.name,
+          data.email,
+          data.password,
+          data.hallTicket,
+          data.branch,
+          {
+            hallTicket: data.hallTicket,
+            branch: data.branch,
+            regulation: data.regulation,
+            joiningYear: data.joiningYear,
+            phone: formatPhone(data.phone)
+          }
+        );
+
+        if (state.imageFile) {
+          const photoURL = await uploadProfileImage(user.uid, state.imageFile);
+          await updateUserProfile({ photoURL });
+          await saveUserProfile(user.uid, { photoURL });
+        }
+
+        showAlert("Account created successfully. Redirecting to your dashboard...", "success");
+        window.setTimeout(() => {
+          window.location.href = "dashboard.html";
+        }, 900);
+      } catch (error) {
+        if (error.code === "auth/email-already-in-use") {
+          document.getElementById("loginEmail").value = data.email;
+          switchView("login");
+          showAlert("This email already has an account. Please sign in instead.", "warning");
+        } else {
+          showAlert(friendlyError(error.code), "error");
+        }
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    async function handleLogin(event) {
+      event.preventDefault();
+      clearAlert();
+
+      const email = document.getElementById("loginEmail").value.trim();
+      const password = document.getElementById("loginPassword").value;
+
+      if (!email || !password) {
+        showAlert("Enter your email and password to sign in.", "warning");
+        return;
+      }
+
+      setLoading(true, "Signing you in...");
+      try {
+        await signIn(email, password);
+        window.location.href = "dashboard.html";
+      } catch (error) {
+        showAlert(friendlyError(error.code), "error");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    async function handleGoogleSignIn() {
+      clearAlert();
+      setLoading(true, "Connecting with Google...");
+      try {
+        await googleSignIn();
+        window.location.href = "dashboard.html";
+      } catch (error) {
+        showAlert(friendlyError(error.code), "error");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    function updateAssistantContent() {
+      const branch = elements.branch.value.trim() || "your branch";
+      const regulation = elements.regulation.value || "your regulation";
+      const year = elements.joiningYear.value || "your joining year";
+      const suggestions = [
+        `Focus your first dashboard setup around ${branch}.`,
+        `Use the ${regulation} regulation to keep your GPA calculations aligned with your curriculum.`,
+        `Build semester tracking milestones starting from ${year}.`
+      ];
+
+      elements.assistantContent.innerHTML = `
+        <p class="rounded-2xl bg-sky-50 px-4 py-3 text-sky-700 dark:bg-sky-950/40 dark:text-sky-200">
+          Your onboarding summary is ready. Here are three smart setup suggestions tailored to your profile.
+        </p>
+        ${suggestions.map(text => `<div class="rounded-2xl border border-slate-200/80 px-4 py-3 dark:border-slate-700/80">${text}</div>`).join("")}
+      `;
+    }
+
+    function openAssistant() {
+      updateAssistantContent();
+      elements.assistantDialog.showModal();
+    }
+  </script>
 </body>
 </html>

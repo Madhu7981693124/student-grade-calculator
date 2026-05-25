@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Dashboard — SGPA & CGPA   Calculator</title>
   <link rel="stylesheet" href="style.css?v=2"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"/>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
@@ -49,11 +50,90 @@
   <a href="about.html">&#8505;&#65039; About</a>
 </nav>
 
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+<div class="app-shell">
+  <aside class="sidebar glass-sidebar" id="appSidebar">
+    <div class="sidebar-top">
+      <div class="brand-block">
+        <div class="brand-mark"><i class="fa-solid fa-graduation-cap"></i></div>
+        <div>
+          <p class="brand-eyebrow">Student Dashboard</p>
+          <h1>Grade Studio</h1>
+        </div>
+      </div>
+      <button class="sidebar-close" id="sidebarCloseBtn" type="button" aria-label="Close sidebar">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a href="dashboard.html"><i class="fa-solid fa-house"></i><span>Dashboard</span></a>
+      <a href="#semHistory"><i class="fa-solid fa-layer-group"></i><span>My Semesters</span><span class="nav-pill" id="semesterCountBadge">0</span></a>
+      <a href="sgpa.html"><i class="fa-solid fa-calculator"></i><span>Calculator</span></a>
+      <a href="#profileModal" id="profileNavLink"><i class="fa-solid fa-id-card"></i><span>My Profile</span></a>
+      <a href="about.html"><i class="fa-solid fa-gear"></i><span>Settings</span></a>
+      <a href="#" id="sidebarLogoutLink"><i class="fa-solid fa-right-from-bracket"></i><span>Logout</span></a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <button class="theme-switch-card" id="sidebarThemeToggle" type="button">
+        <span><i class="fa-solid fa-circle-half-stroke"></i> Theme</span>
+        <strong id="themeLabel">Light</strong>
+      </button>
+      <div class="sidebar-user-card" id="sidebarUserCard" tabindex="0">
+        <div class="sidebar-user-main">
+          <img id="sidebarProfileImage" src="https://api.dicebear.com/7.x/avataaars/svg?seed=Ganesh" alt="Profile" class="sidebar-avatar" />
+          <div>
+            <p class="sidebar-user-name" id="sidebarUserName">Student Name</p>
+            <p class="sidebar-user-meta"><span id="sidebarRegulation">R23</span> | <span id="sidebarBranch">CSE</span></p>
+          </div>
+        </div>
+        <button class="sidebar-user-arrow" id="sidebarUserArrow" type="button" aria-label="Open user menu">
+          <i class="fa-solid fa-angle-up"></i>
+        </button>
+        <div class="sidebar-user-dropdown" id="sidebarUserDropdown">
+          <button type="button" id="openProfileFromDropdown"><i class="fa-solid fa-user-pen"></i> View profile</button>
+          <button type="button" id="dropdownLogoutBtn"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <div class="dashboard-main">
+    <header class="topbar glass-topbar">
+      <div class="topbar-left">
+        <button class="menu-toggle" id="menuToggleBtn" type="button" aria-label="Open menu" aria-expanded="false">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+        <div>
+          <p class="topbar-label">Dashboard Panel</p>
+          <h2>My Profile</h2>
+        </div>
+      </div>
+
+      <div class="topbar-right">
+        <span class="reg-badge" id="headerRegBadge">R23</span>
+        <button class="notify-btn" type="button" aria-label="Notifications">
+          <i class="fa-regular fa-bell"></i>
+          <span class="notify-dot">3</span>
+        </button>
+        <button class="topbar-avatar-btn" id="topbarProfileBtn" type="button" title="Open profile">
+          <img id="topbarProfileImage" src="https://api.dicebear.com/7.x/avataaars/svg?seed=Ganesh" alt="Profile" class="profile-image" />
+        </button>
+      </div>
+    </header>
+
 <div class="page">
   <div class="main-content">
     <div class="hero">
-      <h2>Welcome back, <span id="userName">Student</span> &#128075;</h2>
+      <h2>Welcome back, <span id="heroUserName">Student</span> &#128075;</h2>
       <p>Track your academic performance across all semesters.</p>
+    </div>
+    <div id="dataAccessNotice" class="card" style="display:none;border-color:rgba(245,158,11,0.45);background:rgba(245,158,11,0.08);">
+      <h2 style="color:var(--warning);margin-bottom:8px;"><i class="fa-solid fa-triangle-exclamation"></i> Data Access Notice</h2>
+      <p class="info" id="dataAccessNoticeText">Some dashboard data could not be loaded.</p>
     </div>
 
     <div class="stats-grid">
@@ -166,14 +246,74 @@
   </div>
 </div>
 </div>
+</div>
+</div>
 
 <script type="module">
   import { requireAuth, getSemesters, getSemester, saveSemester, deleteSemester, saveUserProfile, getUserProfile, updateUserProfile, gradePerformance, GRADE_POINTS, toggleDark, logout, initDarkMode, setActiveNav, pdfNewPageIfNeeded } from "./app.js";
   initDarkMode();
   setActiveNav();
 
-  document.getElementById("darkToggleBtn").addEventListener("click", toggleDark);
+  const $ = id => document.getElementById(id);
+  const menuToggleBtn = $("menuToggleBtn");
+  const sidebar = $("appSidebar");
+  const sidebarOverlay = $("sidebarOverlay");
+  const sidebarCloseBtn = $("sidebarCloseBtn");
+  const sidebarThemeToggle = $("sidebarThemeToggle");
+  const topbarProfileBtn = $("topbarProfileBtn");
+  const profileNavLink = $("profileNavLink");
+  const sidebarLogoutLink = $("sidebarLogoutLink");
+  const dropdownLogoutBtn = $("dropdownLogoutBtn");
+  const openProfileFromDropdown = $("openProfileFromDropdown");
+  const sidebarUserArrow = $("sidebarUserArrow");
+  const sidebarUserDropdown = $("sidebarUserDropdown");
+  const semesterCountBadge = $("semesterCountBadge");
+
+  document.getElementById("darkToggleBtn").addEventListener("click", () => {
+    toggleDark();
+    syncThemeUI();
+  });
   document.getElementById("logoutBtn").addEventListener("click", logout);
+  sidebarThemeToggle.addEventListener("click", () => {
+    toggleDark();
+    syncThemeUI();
+  });
+  sidebarLogoutLink.addEventListener("click", event => {
+    event.preventDefault();
+    logout();
+  });
+  dropdownLogoutBtn.addEventListener("click", logout);
+  topbarProfileBtn.addEventListener("click", () => openProfileModal());
+  openProfileFromDropdown.addEventListener("click", () => openProfileModal());
+  profileNavLink.addEventListener("click", event => {
+    event.preventDefault();
+    openProfileModal();
+    closeSidebar();
+  });
+  menuToggleBtn.addEventListener("click", toggleSidebar);
+  sidebarCloseBtn.addEventListener("click", closeSidebar);
+  sidebarOverlay.addEventListener("click", closeSidebar);
+  sidebarUserArrow.addEventListener("click", () => {
+    sidebarUserDropdown.classList.toggle("open");
+  });
+  document.querySelectorAll(".sidebar-nav a").forEach(link => {
+    link.addEventListener("click", () => {
+      if (window.innerWidth < 1024) closeSidebar();
+    });
+  });
+  document.addEventListener("keydown", event => {
+    if (event.key === "Escape") {
+      closeSidebar();
+      sidebarUserDropdown.classList.remove("open");
+    }
+  });
+  document.addEventListener("click", event => {
+    if (!sidebarUserDropdown.contains(event.target) && !sidebarUserArrow.contains(event.target)) {
+      sidebarUserDropdown.classList.remove("open");
+    }
+  });
+
+  syncThemeUI();
 
   let chartInst = null;
   let uid = null;
@@ -188,34 +328,112 @@
     uid = user.uid;
     document.getElementById("userChip").textContent = user.email;
     document.getElementById("userName").textContent = user.displayName || user.email.split("@")[0];
+    $("heroUserName").textContent = user.displayName || user.email.split("@")[0];
+    $("sidebarUserName").textContent = user.displayName || user.email.split("@")[0];
     await loadProfile();
-    allSemesters = await getSemesters(uid);
-    renderStats(allSemesters);
-    renderChart(allSemesters);
-    renderHistory(allSemesters);
+    try {
+      allSemesters = await getSemesters(uid);
+      hideDataAccessNotice();
+      renderStats(allSemesters);
+      renderChart(allSemesters);
+      renderHistory(allSemesters);
+    } catch (error) {
+      console.error("Semester load error:", error);
+      allSemesters = [];
+      renderStats(allSemesters);
+      renderChart(allSemesters);
+      renderHistory(allSemesters);
+      if (isPermissionDenied(error)) {
+        showDataAccessNotice("Firestore blocked access to your semester data. Update your Firebase rules so signed-in users can read their own documents.");
+      } else {
+        showDataAccessNotice("Unable to load semester data right now. Please try again in a moment.");
+      }
+    }
   });
+
+  function isPermissionDenied(error) {
+    return error?.code === "permission-denied" || error?.message?.includes("Missing or insufficient permissions");
+  }
+
+  function showDataAccessNotice(message) {
+    $("dataAccessNoticeText").textContent = message;
+    $("dataAccessNotice").style.display = "block";
+  }
+
+  function hideDataAccessNotice() {
+    $("dataAccessNotice").style.display = "none";
+  }
+
+  function toggleSidebar() {
+    const open = !sidebar.classList.contains("open");
+    sidebar.classList.toggle("open", open);
+    sidebarOverlay.classList.toggle("open", open);
+    menuToggleBtn.classList.toggle("is-open", open);
+    menuToggleBtn.setAttribute("aria-expanded", String(open));
+  }
+
+  function closeSidebar() {
+    sidebar.classList.remove("open");
+    sidebarOverlay.classList.remove("open");
+    menuToggleBtn.classList.remove("is-open");
+    menuToggleBtn.setAttribute("aria-expanded", "false");
+  }
+
+  function syncThemeUI() {
+    const theme = document.documentElement.getAttribute("data-theme") || "light";
+    $("themeLabel").textContent = theme === "dark" ? "Dark" : "Light";
+  }
+
+  function updateProfileSurfaces({ name, branch, regulation, photoURL }) {
+    if (name) {
+      $("userName").textContent = name;
+      $("heroUserName").textContent = name;
+      $("sidebarUserName").textContent = name;
+    }
+    if (branch) {
+      $("sidebarBranch").textContent = branch;
+    }
+    if (regulation) {
+      $("sidebarRegulation").textContent = regulation;
+      $("headerRegBadge").textContent = regulation;
+    }
+    if (photoURL) {
+      $("headerProfileImage").src = photoURL;
+      $("topbarProfileImage").src = photoURL;
+      $("sidebarProfileImage").src = photoURL;
+      $("modalProfileImage").src = photoURL;
+    }
+  }
 
   async function loadProfile() {
     try {
       const profile = await getUserProfile(uid);
       const name = profile?.name || currentUser.displayName || "";
+      const branch = profile?.branch || "";
+      const regulation = profile?.regulation || "R23";
       profileImageData = profile?.photoURL || currentUser.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(currentUser.email || 'user')}`;
       document.getElementById("profileName").value  = name;
       document.getElementById("profileRoll").value  = profile?.roll   || "";
-      document.getElementById("profileBranch").value = profile?.branch || "";
+      document.getElementById("profileBranch").value = branch;
       document.getElementById("profileEmail").value  = currentUser.email || "";
-      document.getElementById("userName").textContent = name || currentUser.email.split("@")[0];
-      document.getElementById("headerProfileImage").src = profileImageData;
-      document.getElementById("modalProfileImage").src  = profileImageData;
+      updateProfileSurfaces({
+        name: name || currentUser.email.split("@")[0],
+        branch: branch || "Branch",
+        regulation,
+        photoURL: profileImageData
+      });
     } catch (error) {
       console.error("Profile load error:", error);
       const name = currentUser.displayName || currentUser.email.split("@")[0] || "";
       document.getElementById("profileName").value = name;
-      document.getElementById("userName").textContent = name;
       const fallbackUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(currentUser.email || 'user')}`;
       profileImageData = fallbackUrl;
-      document.getElementById("headerProfileImage").src = fallbackUrl;
-      document.getElementById("modalProfileImage").src  = fallbackUrl;
+      updateProfileSurfaces({
+        name,
+        branch: "Branch",
+        regulation: "R23",
+        photoURL: fallbackUrl
+      });
     }
   }
 
@@ -234,8 +452,7 @@
     reader.onload = () => {
       profileImageData = reader.result;
       document.getElementById("profileImage").src = profileImageData;
-      document.getElementById("headerProfileImage").src = profileImageData;
-      document.getElementById("modalProfileImage").src = profileImageData;
+      updateProfileSurfaces({ photoURL: profileImageData });
     };
     reader.readAsDataURL(file);
   });
@@ -255,9 +472,7 @@
       if (currentUser.displayName !== name) {
         await updateUserProfile({ displayName: name });
       }
-      document.getElementById("userName").textContent    = name;
-      document.getElementById("headerProfileImage").src  = profileImageData;
-      document.getElementById("modalProfileImage").src   = profileImageData;
+      updateProfileSurfaces({ name, branch, photoURL: profileImageData });
       msg.textContent = "Profile saved successfully.";
     } catch (error) {
       console.error("Profile save error:", error);
@@ -266,6 +481,7 @@
   };
 
   function renderStats(sems) {
+    semesterCountBadge.textContent = sems.length;
     if (!sems.length) return;
     const tw = sems.reduce((s,x) => s + parseFloat(x.sgpa)*x.credits, 0);
     const tc = sems.reduce((s,x) => s + x.credits, 0);
