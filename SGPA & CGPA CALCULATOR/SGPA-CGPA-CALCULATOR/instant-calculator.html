@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Instant SGPA Calculator | Grade Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+  <link rel="stylesheet" href="academic-dashboard.css" />
+</head>
+<body data-page="instant-calculator">
+  <div class="dashboard-shell">
+    <aside class="sidebar">
+      <div class="brand-panel">
+        <div class="brand-panel__logo"><i class="fa-solid fa-graduation-cap"></i></div>
+        <div>
+          <p class="brand-panel__eyebrow">Academic Platform</p>
+          <h1>Grade Studio</h1>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <a class="sidebar-link" href="dashboard.html">
+          <i class="fa-solid fa-table-columns"></i>
+          <span>Dashboard</span>
+        </a>
+        <a class="sidebar-link" href="my-semesters.html">
+          <i class="fa-solid fa-layer-group"></i>
+          <span>My Semesters</span>
+          <span class="sidebar-link__count" id="sidebarSemesterCount">0</span>
+        </a>
+        <a class="sidebar-link is-active" href="instant-calculator.html">
+          <i class="fa-solid fa-bolt"></i>
+          <span>Instant SGPA Calculator</span>
+        </a>
+        <button class="sidebar-link sidebar-link--button" id="openProfileBtn" type="button">
+          <i class="fa-solid fa-user-graduate"></i>
+          <span>Profile</span>
+        </button>
+        <a class="sidebar-link sidebar-link--danger" id="logoutBtn" href="index.html">
+          <i class="fa-solid fa-right-from-bracket"></i>
+          <span>Logout</span>
+        </a>
+      </nav>
+
+      <button class="theme-switch" id="themeToggleBtn" type="button">
+        <i class="fa-solid fa-circle-half-stroke"></i>
+        <span>Toggle Theme</span>
+        <strong id="themeToggleLabel">Dark</strong>
+      </button>
+
+      <div class="sidebar-profile glass-panel">
+        <img id="sidebarAvatar" class="sidebar-profile__avatar" src="https://api.dicebear.com/8.x/thumbs/svg?seed=Student" alt="Student avatar" />
+        <div class="sidebar-profile__meta">
+          <strong id="sidebarName">Student Name</strong>
+          <span id="sidebarRegulation">R23</span>
+          <small id="sidebarDepartment">Computer Science and Engineering</small>
+        </div>
+      </div>
+    </aside>
+
+    <main class="page-shell">
+      <header class="topbar glass-panel">
+        <div class="topbar__title">
+          <p class="topbar__eyebrow">Calculation Workspace</p>
+          <h2>Instant SGPA Calculator</h2>
+        </div>
+
+        <button class="profile-chip" id="headerProfileBtn" type="button">
+          <img id="headerAvatar" src="https://api.dicebear.com/8.x/thumbs/svg?seed=Student" alt="Profile avatar" />
+          <span class="profile-chip__text">
+            <strong id="headerStudentName">Student Name</strong>
+            <small><span id="headerDepartment">CSE</span> | <span id="regBadge">R23</span></small>
+          </span>
+        </button>
+      </header>
+
+      <section class="info-banner glass-panel">
+        <div class="info-banner__icon"><i class="fa-solid fa-rocket"></i></div>
+        <div>
+          <strong>Dedicated SGPA workspace</strong>
+          <p>Use this separate calculator section to build subjects, validate rows, and track live semester performance without crowding the dashboard.</p>
+        </div>
+      </section>
+
+      <section class="sgpa-workspace glass-panel" id="instantCalculatorSection">
+        <div class="sgpa-workspace__header">
+          <div>
+            <p class="section-label">Responsive Dashboard Tool</p>
+            <h3><i class="fa-solid fa-bolt"></i> Instant SGPA Calculator</h3>
+            <p class="sgpa-workspace__intro">Build your semester grade sheet in one clean workspace with live SGPA updates, credit tracking, and performance insights.</p>
+          </div>
+          <div class="sgpa-workspace__badge glow-panel">
+            <span>Calculation Progress</span>
+            <strong id="instantProgressLabel">0% complete</strong>
+            <div class="sgpa-progress">
+              <div class="sgpa-progress__bar" id="instantProgressBar"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sgpa-controls">
+          <label class="sgpa-control">
+            <span>Semester</span>
+            <select id="instantSemesterSelect"></select>
+          </label>
+          <label class="sgpa-control">
+            <span>Regulation</span>
+            <select id="instantRegulationSelect">
+              <option value="R23">R23</option>
+              <option value="R20">R20</option>
+              <option value="R19">R19</option>
+              <option value="R16">R16</option>
+            </select>
+          </label>
+          <div class="sgpa-actions">
+            <button class="primary-action" id="calculateInstantBtn" type="button">
+              <i class="fa-solid fa-wand-magic-sparkles"></i>
+              Calculate SGPA
+            </button>
+            <button class="secondary-action glow-action" id="resetInstantBtn" type="button">
+              <i class="fa-solid fa-rotate-left"></i>
+              Reset
+            </button>
+            <button class="secondary-action glow-action" id="addInstantRowBtn" type="button">
+              <i class="fa-solid fa-plus"></i>
+              Add Subject
+            </button>
+          </div>
+        </div>
+
+        <div class="sgpa-overview">
+          <article class="sgpa-highlight glow-panel">
+            <span>Live SGPA</span>
+            <strong id="instantSgpaValue">0.00</strong>
+            <small id="instantSgpaMeta">Add your subjects, credits, and grades to calculate instantly.</small>
+            <div class="performance-badge performance-badge--idle" id="instantPerformanceBadge">Awaiting data</div>
+          </article>
+
+          <article class="sgpa-metric-card">
+            <span>Total Credits</span>
+            <strong id="instantTotalCredits">0.0</strong>
+            <small>Credits included in the weighted average</small>
+          </article>
+
+          <article class="sgpa-metric-card">
+            <span>Weighted Points</span>
+            <strong id="instantWeightedPoints">0.0</strong>
+            <small>Total grade points multiplied by credits</small>
+          </article>
+
+          <article class="sgpa-metric-card">
+            <span>Subjects Ready</span>
+            <strong id="instantCompletedCount">0 / 0</strong>
+            <small id="instantSubjectCount">No validated subjects yet</small>
+          </article>
+
+          <article class="sgpa-metric-card">
+            <span>Average Credits</span>
+            <strong id="instantAverageCredits">0.0</strong>
+            <small>Average credits per valid subject</small>
+          </article>
+        </div>
+
+        <div class="sgpa-content-grid">
+          <div class="sgpa-entry-panel">
+            <div class="sgpa-table-head">
+              <div>Subject Name</div>
+              <div>Subject Code</div>
+              <div>Credits</div>
+              <div>Grade</div>
+              <div>Action</div>
+            </div>
+            <div class="instant-rows" id="instantRows"></div>
+            <p class="validation-message" id="instantValidationMessage">Fill in every subject row to unlock accurate live SGPA updates.</p>
+          </div>
+
+          <aside class="sgpa-summary-panel">
+            <div class="sgpa-summary-panel__card">
+              <div class="sgpa-summary-panel__header">
+                <div>
+                  <p class="section-label">Summary</p>
+                  <h4>Credit Snapshot</h4>
+                </div>
+                <span class="summary-chip" id="instantSummarySemester">Semester 1-1</span>
+              </div>
+              <div class="summary-stat-list">
+                <div class="summary-stat">
+                  <span>Regulation</span>
+                  <strong id="instantSummaryRegulation">R23</strong>
+                </div>
+                <div class="summary-stat">
+                  <span>Performance</span>
+                  <strong id="instantSummaryPerformance">Awaiting data</strong>
+                </div>
+                <div class="summary-stat">
+                  <span>Backlog Risk</span>
+                  <strong id="instantSummaryBacklog">0 subjects</strong>
+                </div>
+              </div>
+            </div>
+
+            <div class="sgpa-summary-panel__card">
+              <div class="sgpa-summary-panel__header">
+                <div>
+                  <p class="section-label">Grade Statistics</p>
+                  <h4>Distribution</h4>
+                </div>
+              </div>
+              <div class="grade-breakdown" id="instantGradeBreakdown"></div>
+            </div>
+          </aside>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="modal-backdrop" id="profileModal">
+    <div class="modal-panel glass-panel modal-panel--profile">
+      <div class="modal-panel__header">
+        <div>
+          <p class="section-label">Student Profile</p>
+          <h3><i class="fa-solid fa-user-graduate"></i> Profile</h3>
+        </div>
+        <button class="circle-btn" id="closeProfileModalBtn" type="button" aria-label="Close profile">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div id="profileReactRoot" class="mt-5"></div>
+    </div>
+  </div>
+
+  <script type="module" src="academic-dashboard.js"></script>
+</body>
+</html>

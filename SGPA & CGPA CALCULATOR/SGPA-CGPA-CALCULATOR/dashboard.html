@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -8,126 +8,130 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ["Plus Jakarta Sans", "sans-serif"]
+          }
+        }
+      }
+    };
+  </script>
   <link rel="stylesheet" href="academic-dashboard.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body data-page="dashboard">
-  <div class="app-backdrop"></div>
-  <div class="shell">
-    <aside class="sidebar" id="sidebar">
-      <div class="sidebar__top">
-        <div class="brand">
-          <div class="brand__mark"><i class="fa-solid fa-graduation-cap"></i></div>
-          <div>
-            <p class="brand__eyebrow">Academic Platform</p>
-            <h1>Grade Studio</h1>
-          </div>
+  <div class="dashboard-shell">
+    <aside class="sidebar">
+      <div class="brand-panel">
+        <div class="brand-panel__logo"><i class="fa-solid fa-graduation-cap"></i></div>
+        <div>
+          <p class="brand-panel__eyebrow">Academic Platform</p>
+          <h1>Grade Studio</h1>
         </div>
-        <button class="icon-btn sidebar__close" id="sidebarCloseBtn" type="button" aria-label="Close menu">
-          <i class="fa-solid fa-xmark"></i>
-        </button>
       </div>
 
-      <nav class="sidebar__nav">
-        <a class="sidebar__link is-active" href="dashboard.html">
+      <nav class="sidebar-nav">
+        <a class="sidebar-link is-active" href="dashboard.html">
           <i class="fa-solid fa-table-columns"></i>
           <span>Dashboard</span>
         </a>
-        <a class="sidebar__link" href="my-semesters.html">
+        <a class="sidebar-link" href="my-semesters.html">
           <i class="fa-solid fa-layer-group"></i>
           <span>My Semesters</span>
-          <span class="pill" id="sidebarSemesterCount">0</span>
+          <span class="sidebar-link__count" id="sidebarSemesterCount">0</span>
+        </a>
+        <a class="sidebar-link" href="instant-calculator.html">
+          <i class="fa-solid fa-bolt"></i>
+          <span>Instant SGPA Calculator</span>
+        </a>
+        <button class="sidebar-link sidebar-link--button" id="openProfileBtn" type="button">
+          <i class="fa-solid fa-user-graduate"></i>
+          <span>Profile</span>
+        </button>
+        <a class="sidebar-link sidebar-link--danger" id="logoutBtn" href="index.html">
+          <i class="fa-solid fa-right-from-bracket"></i>
+          <span>Logout</span>
         </a>
       </nav>
 
-      <div class="sidebar__footer">
-        <button class="theme-toggle-card" id="themeToggleCard" type="button">
-          <span><i class="fa-solid fa-circle-half-stroke"></i> Appearance</span>
-          <strong id="themeLabel">Light</strong>
-        </button>
+      <button class="theme-switch" id="themeToggleBtn" type="button">
+        <i class="fa-solid fa-circle-half-stroke"></i>
+        <span>Toggle Theme</span>
+        <strong id="themeToggleLabel">Dark</strong>
+      </button>
 
-        <div class="sidebar-user">
-          <img id="sidebarAvatar" class="sidebar-user__avatar" src="https://api.dicebear.com/8.x/thumbs/svg?seed=Student" alt="Student avatar" />
-          <div class="sidebar-user__meta">
-            <strong id="sidebarName">Student Name</strong>
-            <span><span id="sidebarRegulation">R23</span> | <span id="sidebarBranch">CSE</span></span>
-          </div>
+      <div class="sidebar-profile glass-panel">
+        <img id="sidebarAvatar" class="sidebar-profile__avatar" src="https://api.dicebear.com/8.x/thumbs/svg?seed=Student" alt="Student avatar" />
+        <div class="sidebar-profile__meta">
+          <strong id="sidebarName">Student Name</strong>
+          <span id="sidebarRegulation">R23</span>
+          <small id="sidebarDepartment">Computer Science and Engineering</small>
         </div>
       </div>
     </aside>
 
-    <div class="overlay" id="overlay"></div>
-
-    <main class="main">
-      <header class="topbar glass">
-        <div class="topbar__left">
-          <button class="menu-btn" id="menuBtn" type="button" aria-label="Open navigation" aria-expanded="false">
-            <span></span>
-            <span></span>
-            <span></span>
-          </button>
-          <div>
-            <p class="topbar__eyebrow">Overview</p>
-            <h2>Dashboard</h2>
-          </div>
+    <main class="page-shell">
+      <header class="topbar glass-panel">
+        <div class="topbar__title">
+          <p class="topbar__eyebrow">Overview</p>
+          <h2>Dashboard</h2>
         </div>
 
-        <div class="topbar__right">
-          <span class="reg-badge" id="regBadge">R23</span>
-          <button class="icon-btn notification-btn" type="button" aria-label="Notifications">
-            <i class="fa-regular fa-bell"></i>
-            <span class="notification-dot">3</span>
-          </button>
-        </div>
+        <button class="profile-chip" id="headerProfileBtn" type="button">
+          <img id="headerAvatar" src="https://api.dicebear.com/8.x/thumbs/svg?seed=Student" alt="Profile avatar" />
+          <span class="profile-chip__text">
+            <strong id="headerStudentName">Student Name</strong>
+            <small><span id="headerDepartment">CSE</span> | <span id="regBadge">R23</span></small>
+          </span>
+        </button>
       </header>
 
-      <section class="hero-card glass">
-        <div class="hero-card__content">
-          <div class="hero-card__text">
-            <p class="hero-card__eyebrow">Student Snapshot</p>
-            <h3>Welcome back, <span id="heroName">Student</span></h3>
-            <div class="hero-meta">
-              <span><i class="fa-regular fa-id-card"></i> <span id="heroHallTicket">23A91A05N2</span></span>
-              <span><i class="fa-solid fa-code-branch"></i> <span id="heroBranch">Computer Science and Engineering</span></span>
-              <span><i class="fa-solid fa-file-lines"></i> <span id="heroRegulation">R23</span></span>
-            </div>
+      <section class="welcome-hero">
+        <div class="welcome-hero__text">
+          <p class="welcome-hero__eyebrow">Student Snapshot</p>
+          <h3>Welcome back, <span id="heroName">Student</span></h3>
+          <div class="welcome-hero__meta">
+            <span><i class="fa-regular fa-id-card"></i> <span id="heroHallTicket">23A91A05N2</span></span>
+            <span><i class="fa-solid fa-code-branch"></i> <span id="heroBranch">Computer Science and Engineering</span></span>
+            <span><i class="fa-solid fa-file-circle-check"></i> <span id="heroRegulation">R23</span></span>
           </div>
+        </div>
 
-          <div class="hero-card__cgpa">
-            <span>Current CGPA</span>
-            <strong id="heroCgpa">0.00</strong>
-            <small id="heroCgpaLabel">Start adding semester grades</small>
-          </div>
+        <div class="welcome-hero__cgpa glass-panel glow-panel">
+          <span>Current CGPA</span>
+          <strong id="heroCgpa">0.00</strong>
+          <small id="heroCgpaLabel">Start adding semester grades</small>
         </div>
       </section>
 
-      <section class="stats-grid" id="statsGrid">
-        <article class="stat-card glass">
-          <div class="stat-card__icon blue"><i class="fa-solid fa-chart-simple"></i></div>
+      <section class="stats-grid">
+        <article class="stat-card glass-panel">
+          <div class="stat-card__icon stat-card__icon--blue"><i class="fa-solid fa-chart-simple"></i></div>
           <div>
             <span>CGPA</span>
             <strong id="statCgpa">0.00</strong>
           </div>
         </article>
-
-        <article class="stat-card glass">
-          <div class="stat-card__icon cyan"><i class="fa-solid fa-percent"></i></div>
+        <article class="stat-card glass-panel">
+          <div class="stat-card__icon stat-card__icon--cyan"><i class="fa-solid fa-percent"></i></div>
           <div>
             <span>Percentage</span>
             <strong id="statPercentage">0.0%</strong>
           </div>
         </article>
-
-        <article class="stat-card glass">
-          <div class="stat-card__icon violet"><i class="fa-solid fa-book-open-reader"></i></div>
+        <article class="stat-card glass-panel">
+          <div class="stat-card__icon stat-card__icon--violet"><i class="fa-solid fa-book-open-reader"></i></div>
           <div>
             <span>Total Credits</span>
             <strong id="statCredits">0</strong>
           </div>
         </article>
-
-        <article class="stat-card glass">
-          <div class="stat-card__icon amber"><i class="fa-solid fa-circle-exclamation"></i></div>
+        <article class="stat-card glass-panel">
+          <div class="stat-card__icon stat-card__icon--amber"><i class="fa-solid fa-triangle-exclamation"></i></div>
           <div>
             <span>Backlogs</span>
             <strong id="statBacklogs">0</strong>
@@ -135,43 +139,57 @@
         </article>
       </section>
 
-      <section class="content-grid">
-        <article class="panel glass">
-          <div class="panel__header">
+      <section class="dashboard-grid">
+        <article class="content-card glass-panel">
+          <div class="content-card__header">
             <div>
-              <p class="section-eyebrow">Semester SGPA</p>
+              <p class="section-label">Semester SGPA</p>
               <h3><i class="fa-solid fa-layer-group"></i> Recent Semesters</h3>
             </div>
-            <a class="text-link" href="my-semesters.html">View All</a>
+            <a class="text-action" href="my-semesters.html">View All</a>
           </div>
 
-          <div id="recentSemesters"></div>
+          <div id="recentSemesters" class="recent-semesters"></div>
           <div class="empty-state" id="recentSemestersEmpty">
             <div class="empty-state__icon"><i class="fa-regular fa-folder-open"></i></div>
             <h4>No semester grades yet</h4>
             <p>Add your subject grades to start tracking SGPA and CGPA trends.</p>
-            <a class="primary-btn" href="my-semesters.html">
+            <a class="primary-action" href="my-semesters.html">
               <i class="fa-solid fa-plus"></i>
               Add Grades
             </a>
           </div>
         </article>
 
-        <article class="panel glass">
-          <div class="panel__header">
+        <article class="content-card glass-panel">
+          <div class="content-card__header">
             <div>
-              <p class="section-eyebrow">Analytics</p>
+              <p class="section-label">Analytics</p>
               <h3><i class="fa-solid fa-chart-line"></i> SGPA Trend</h3>
             </div>
           </div>
-
-          <div class="chart-wrap">
+          <div class="chart-box">
             <canvas id="trendChart"></canvas>
           </div>
           <p class="chart-summary" id="chartSummary">Your academic graph will appear here once you save semesters.</p>
         </article>
       </section>
     </main>
+  </div>
+
+  <div class="modal-backdrop" id="profileModal">
+    <div class="modal-panel glass-panel modal-panel--profile">
+      <div class="modal-panel__header">
+        <div>
+          <p class="section-label">Student Profile</p>
+          <h3><i class="fa-solid fa-user-graduate"></i> Profile</h3>
+        </div>
+        <button class="circle-btn" id="closeProfileModalBtn" type="button" aria-label="Close profile">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div id="profileReactRoot" class="mt-5"></div>
+    </div>
   </div>
 
   <script type="module" src="academic-dashboard.js"></script>

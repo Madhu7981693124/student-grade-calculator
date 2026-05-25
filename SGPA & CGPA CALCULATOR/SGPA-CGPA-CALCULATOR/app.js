@@ -18,12 +18,13 @@ export const GRADE_POINTS = { S:10, A:9, B:8, C:7, D:6, E:5, F:0, Ab:0 };
 
 export function gradePerformance(sgpa) {
   const v = parseFloat(sgpa);
-  if (v >= 9.0) return "Outstanding";
+  if (v >= 9.0) return "Superior";
   if (v >= 8.0) return "Excellent";
   if (v >= 7.0) return "Very Good";
   if (v >= 6.0) return "Good";
   if (v >= 5.0) return "Average";
-  return "Needs Improvement";
+  if (v >= 4.0) return "Pass";
+  return "Fail";
 }
 
 // (SGPA - 0.5) * 10  — JNTUGV conversion
@@ -63,10 +64,15 @@ export async function signUp(name, email, password, roll, branch, extraProfile =
 }
 
 export async function saveUserProfile(uid, profile) {
-  await setDoc(doc(db, "users", uid), profile, { merge: true });
+  await Promise.all([
+    setDoc(doc(db, "users", uid), profile, { merge: true }),
+    setDoc(doc(db, "users", uid, "profile", "main"), profile, { merge: true })
+  ]);
 }
 
 export async function getUserProfile(uid) {
+  const profileSnap = await getDoc(doc(db, "users", uid, "profile", "main"));
+  if (profileSnap.exists()) return profileSnap.data();
   const snap = await getDoc(doc(db, "users", uid));
   return snap.exists() ? snap.data() : null;
 }
@@ -127,6 +133,19 @@ export async function getSemesters(uid) {
     .sort((a, b) => (parseInt(a.sem.replace(/\D/g,""))||0) - (parseInt(b.sem.replace(/\D/g,""))||0));
 }
 
+export async function saveSemesterRecord(uid, semesterId, data) {
+  await setDoc(doc(db, "users", uid, "semesters", semesterId), data, { merge: true });
+}
+
+export async function getSemesterRecords(uid) {
+  const snap = await getDocs(collection(db, "users", uid, "semesters"));
+  const records = {};
+  snap.forEach(entry => {
+    records[entry.id] = { id: entry.id, ...entry.data() };
+  });
+  return records;
+}
+
 export async function getSemester(uid, sem) {
   const docRef = doc(db, "users", uid, "semesters", semKey(sem));
   const snap = await getDoc(docRef);
@@ -135,6 +154,15 @@ export async function getSemester(uid, sem) {
 
 export async function deleteSemester(uid, sem) {
   await deleteDoc(doc(db, "users", uid, "semesters", semKey(sem)));
+}
+
+export async function getUserSetting(uid, settingId) {
+  const snap = await getDoc(doc(db, "users", uid, "settings", settingId));
+  return snap.exists() ? snap.data() : null;
+}
+
+export async function saveUserSetting(uid, settingId, data) {
+  await setDoc(doc(db, "users", uid, "settings", settingId), data, { merge: true });
 }
 
 // ── Dark mode ───────────────────────────────────────────────────
@@ -177,6 +205,16 @@ export function computeCurrentCGPA(semesters) {
 
 export function computeRequiredSGPA(weightedSum, totalCredits, targetCGPA, remainingSems, creditsPerSem) {
   return (targetCGPA * (totalCredits + remainingSems * creditsPerSem) - weightedSum) / (remainingSems * creditsPerSem);
+}
+
+export function getClassAward(cgpa) {
+  const v = parseFloat(cgpa);
+  if (Number.isNaN(v)) return "";
+  if (v >= 7.5) return "First Class with Distinction";
+  if (v >= 6.5) return "First Class";
+  if (v >= 5.5) return "Second Class";
+  if (v >= 5.0) return "Pass Class";
+  return "Not Eligible";
 }
 
 export function classifyFeasibility(requiredSGPA, currentCGPA) {

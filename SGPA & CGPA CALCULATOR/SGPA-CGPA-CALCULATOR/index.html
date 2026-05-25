@@ -512,11 +512,6 @@
     } from "./app.js";
 
     initDarkMode();
-    onAuthStateChanged(auth, user => {
-      if (user && user.email) {
-        window.location.href = "dashboard.html";
-      }
-    });
 
     const elements = {
       authAlert: document.getElementById("authAlert"),
@@ -597,8 +592,16 @@
     };
 
     const state = {
-      imageFile: null
+      imageFile: null,
+      authFlowInProgress: false
     };
+
+    onAuthStateChanged(auth, user => {
+      if (state.authFlowInProgress) return;
+      if (user && user.email) {
+        window.location.href = "dashboard.html";
+      }
+    });
 
     populateYears();
     bindFloatingSelects();
@@ -846,6 +849,7 @@
       }
 
       const data = getSignupData();
+      state.authFlowInProgress = true;
       setLoading(true, "Creating your student account...");
 
       try {
@@ -882,6 +886,7 @@
         } else {
           showAlert(friendlyError(error.code), "error");
         }
+        state.authFlowInProgress = false;
       } finally {
         setLoading(false);
       }
@@ -899,12 +904,14 @@
         return;
       }
 
+      state.authFlowInProgress = true;
       setLoading(true, "Signing you in...");
       try {
         await signIn(email, password);
         window.location.href = "dashboard.html";
       } catch (error) {
         showAlert(friendlyError(error.code), "error");
+        state.authFlowInProgress = false;
       } finally {
         setLoading(false);
       }
@@ -912,12 +919,14 @@
 
     async function handleGoogleSignIn() {
       clearAlert();
+      state.authFlowInProgress = true;
       setLoading(true, "Connecting with Google...");
       try {
         await googleSignIn();
         window.location.href = "dashboard.html";
       } catch (error) {
         showAlert(friendlyError(error.code), "error");
+        state.authFlowInProgress = false;
       } finally {
         setLoading(false);
       }

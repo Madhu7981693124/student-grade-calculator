@@ -92,7 +92,7 @@
 </div>
 
 <script type="module">
-  import { requireAuth, getSemesters, saveSemester, gradePerformance, toPercent,
+  import { requireAuth, getSemesters, saveSemester, gradePerformance, getClassAward, toPercent,
            toggleDark, logout, initDarkMode, setActiveNav, GRADE_POINTS } from "./app.js";
 
   initDarkMode();
@@ -518,7 +518,7 @@
 
     document.getElementById("cgpaValue").textContent    = cgpa.toFixed(2);
     document.getElementById("cgpaPercent").textContent  = "approx " + toPercent(cgpa) + "%";
-    document.getElementById("cgpaPerf").textContent     = gradePerformance(cgpa);
+    document.getElementById("cgpaPerf").textContent     = getClassAward(cgpa);
     document.getElementById("cgpaResult").style.display = "";
 
     document.getElementById("semBreakdown").innerHTML = sems.map(s => `
