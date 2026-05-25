@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Semesters | Grade Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+  <link rel="stylesheet" href="academic-dashboard.css" />
+</head>
+<body data-page="semesters">
+  <div class="app-backdrop"></div>
+  <div class="shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar__top">
+        <div class="brand">
+          <div class="brand__mark"><i class="fa-solid fa-graduation-cap"></i></div>
+          <div>
+            <p class="brand__eyebrow">Academic Platform</p>
+            <h1>Grade Studio</h1>
+          </div>
+        </div>
+        <button class="icon-btn sidebar__close" id="sidebarCloseBtn" type="button" aria-label="Close menu">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <nav class="sidebar__nav">
+        <a class="sidebar__link" href="dashboard.html">
+          <i class="fa-solid fa-table-columns"></i>
+          <span>Dashboard</span>
+        </a>
+        <a class="sidebar__link is-active" href="my-semesters.html">
+          <i class="fa-solid fa-layer-group"></i>
+          <span>My Semesters</span>
+          <span class="pill" id="sidebarSemesterCount">0</span>
+        </a>
+      </nav>
+
+      <div class="sidebar__footer">
+        <button class="theme-toggle-card" id="themeToggleCard" type="button">
+          <span><i class="fa-solid fa-circle-half-stroke"></i> Appearance</span>
+          <strong id="themeLabel">Light</strong>
+        </button>
+
+        <div class="sidebar-user">
+          <img id="sidebarAvatar" class="sidebar-user__avatar" src="https://api.dicebear.com/8.x/thumbs/svg?seed=Student" alt="Student avatar" />
+          <div class="sidebar-user__meta">
+            <strong id="sidebarName">Student Name</strong>
+            <span><span id="sidebarRegulation">R23</span> | <span id="sidebarBranch">CSE</span></span>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <div class="overlay" id="overlay"></div>
+
+    <main class="main">
+      <header class="topbar glass">
+        <div class="topbar__left">
+          <button class="menu-btn" id="menuBtn" type="button" aria-label="Open navigation" aria-expanded="false">
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
+          <div>
+            <p class="topbar__eyebrow">Semester Editor</p>
+            <h2>My Semesters</h2>
+          </div>
+        </div>
+
+        <div class="topbar__right">
+          <span class="reg-badge" id="regBadge">R23</span>
+          <button class="icon-btn notification-btn" type="button" aria-label="Notifications">
+            <i class="fa-regular fa-bell"></i>
+            <span class="notification-dot">3</span>
+          </button>
+        </div>
+      </header>
+
+      <section class="info-banner glass">
+        <div class="info-banner__icon"><i class="fa-solid fa-circle-info"></i></div>
+        <div>
+          <strong>Getting started</strong>
+          <p>Open a semester card, add subjects with credits and grades, then save to update your dashboard instantly.</p>
+        </div>
+      </section>
+
+      <section class="semesters-grid" id="semesterCards"></section>
+
+      <button class="fab" id="fabBtn" type="button" aria-label="Add semester shortcut">
+        <i class="fa-solid fa-plus"></i>
+      </button>
+    </main>
+  </div>
+
+  <script type="module" src="academic-dashboard.js"></script>
+</body>
+</html>

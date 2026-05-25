@@ -1,822 +1,179 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Dashboard — SGPA & CGPA   Calculator</title>
-  <link rel="stylesheet" href="style.css?v=2"/>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"/>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard | Grade Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+  <link rel="stylesheet" href="academic-dashboard.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
-<body>
-<header class="modern-header">
-  <div class="header-container">
-    <!-- Left Side: App Title -->
-    <div class="header-left">
-      <div class="app-title">
-        <h1>📚 SGPA & CGPA Calculator</h1>
-      </div>
-    </div>
-
-    <!-- Center: Welcome Message -->
-    <div class="header-center">
-      <p class="welcome-text">Welcome back, <span id="userName">Ganesh</span> 👋</p>
-    </div>
-
-    <!-- Right Side: Profile Image -->
-    <div class="header-right">
-      <div class="profile-container" onclick="openProfileModal()" style="cursor:pointer;" title="Click to view/edit profile">
-        <img 
-          id="headerProfileImage"
-          src="https://api.dicebear.com/7.x/avataaars/svg?seed=Ganesh" 
-          alt="Profile" 
-          class="profile-image"
-        />
-      </div>
-    </div>
-  </div>
-
-  <div class="header-controls">
-    <span class="user-chip" id="userChip">...</span>
-    <button class="dark-toggle" id="darkToggleBtn">🌙 Dark</button>
-    <button class="logout-btn" id="logoutBtn">Logout</button>
-  </div>
-</header>
-<nav>
-  <a href="dashboard.html">&#127968; Dashboard</a>
-  <a href="sgpa.html">&#128202; SGPA</a>
-  <a href="cgpa.html">&#128200; CGPA</a>
-  <a href="about.html">&#8505;&#65039; About</a>
-</nav>
-
-<div class="sidebar-overlay" id="sidebarOverlay"></div>
-<div class="app-shell">
-  <aside class="sidebar glass-sidebar" id="appSidebar">
-    <div class="sidebar-top">
-      <div class="brand-block">
-        <div class="brand-mark"><i class="fa-solid fa-graduation-cap"></i></div>
-        <div>
-          <p class="brand-eyebrow">Student Dashboard</p>
-          <h1>Grade Studio</h1>
-        </div>
-      </div>
-      <button class="sidebar-close" id="sidebarCloseBtn" type="button" aria-label="Close sidebar">
-        <i class="fa-solid fa-xmark"></i>
-      </button>
-    </div>
-
-    <nav class="sidebar-nav">
-      <a href="dashboard.html"><i class="fa-solid fa-house"></i><span>Dashboard</span></a>
-      <a href="#semHistory"><i class="fa-solid fa-layer-group"></i><span>My Semesters</span><span class="nav-pill" id="semesterCountBadge">0</span></a>
-      <a href="sgpa.html"><i class="fa-solid fa-calculator"></i><span>Calculator</span></a>
-      <a href="#profileModal" id="profileNavLink"><i class="fa-solid fa-id-card"></i><span>My Profile</span></a>
-      <a href="about.html"><i class="fa-solid fa-gear"></i><span>Settings</span></a>
-      <a href="#" id="sidebarLogoutLink"><i class="fa-solid fa-right-from-bracket"></i><span>Logout</span></a>
-    </nav>
-
-    <div class="sidebar-footer">
-      <button class="theme-switch-card" id="sidebarThemeToggle" type="button">
-        <span><i class="fa-solid fa-circle-half-stroke"></i> Theme</span>
-        <strong id="themeLabel">Light</strong>
-      </button>
-      <div class="sidebar-user-card" id="sidebarUserCard" tabindex="0">
-        <div class="sidebar-user-main">
-          <img id="sidebarProfileImage" src="https://api.dicebear.com/7.x/avataaars/svg?seed=Ganesh" alt="Profile" class="sidebar-avatar" />
+<body data-page="dashboard">
+  <div class="app-backdrop"></div>
+  <div class="shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar__top">
+        <div class="brand">
+          <div class="brand__mark"><i class="fa-solid fa-graduation-cap"></i></div>
           <div>
-            <p class="sidebar-user-name" id="sidebarUserName">Student Name</p>
-            <p class="sidebar-user-meta"><span id="sidebarRegulation">R23</span> | <span id="sidebarBranch">CSE</span></p>
+            <p class="brand__eyebrow">Academic Platform</p>
+            <h1>Grade Studio</h1>
           </div>
         </div>
-        <button class="sidebar-user-arrow" id="sidebarUserArrow" type="button" aria-label="Open user menu">
-          <i class="fa-solid fa-angle-up"></i>
-        </button>
-        <div class="sidebar-user-dropdown" id="sidebarUserDropdown">
-          <button type="button" id="openProfileFromDropdown"><i class="fa-solid fa-user-pen"></i> View profile</button>
-          <button type="button" id="dropdownLogoutBtn"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
-        </div>
-      </div>
-    </div>
-  </aside>
-
-  <div class="dashboard-main">
-    <header class="topbar glass-topbar">
-      <div class="topbar-left">
-        <button class="menu-toggle" id="menuToggleBtn" type="button" aria-label="Open menu" aria-expanded="false">
-          <span></span>
-          <span></span>
-          <span></span>
-        </button>
-        <div>
-          <p class="topbar-label">Dashboard Panel</p>
-          <h2>My Profile</h2>
-        </div>
-      </div>
-
-      <div class="topbar-right">
-        <span class="reg-badge" id="headerRegBadge">R23</span>
-        <button class="notify-btn" type="button" aria-label="Notifications">
-          <i class="fa-regular fa-bell"></i>
-          <span class="notify-dot">3</span>
-        </button>
-        <button class="topbar-avatar-btn" id="topbarProfileBtn" type="button" title="Open profile">
-          <img id="topbarProfileImage" src="https://api.dicebear.com/7.x/avataaars/svg?seed=Ganesh" alt="Profile" class="profile-image" />
+        <button class="icon-btn sidebar__close" id="sidebarCloseBtn" type="button" aria-label="Close menu">
+          <i class="fa-solid fa-xmark"></i>
         </button>
       </div>
-    </header>
 
-<div class="page">
-  <div class="main-content">
-    <div class="hero">
-      <h2>Welcome back, <span id="heroUserName">Student</span> &#128075;</h2>
-      <p>Track your academic performance across all semesters.</p>
-    </div>
-    <div id="dataAccessNotice" class="card" style="display:none;border-color:rgba(245,158,11,0.45);background:rgba(245,158,11,0.08);">
-      <h2 style="color:var(--warning);margin-bottom:8px;"><i class="fa-solid fa-triangle-exclamation"></i> Data Access Notice</h2>
-      <p class="info" id="dataAccessNoticeText">Some dashboard data could not be loaded.</p>
-    </div>
+      <nav class="sidebar__nav">
+        <a class="sidebar__link is-active" href="dashboard.html">
+          <i class="fa-solid fa-table-columns"></i>
+          <span>Dashboard</span>
+        </a>
+        <a class="sidebar__link" href="my-semesters.html">
+          <i class="fa-solid fa-layer-group"></i>
+          <span>My Semesters</span>
+          <span class="pill" id="sidebarSemesterCount">0</span>
+        </a>
+      </nav>
 
-    <div class="stats-grid">
-    <div class="stat-card"><div class="stat-val" id="statSems">&#8212;</div><div class="stat-lbl">Semesters</div></div>
-    <div class="stat-card"><div class="stat-val" id="statCGPA">&#8212;</div><div class="stat-lbl">CGPA</div></div>
-    <div class="stat-card"><div class="stat-val" id="statCredits">&#8212;</div><div class="stat-lbl">Total Credits</div></div>
-    <div class="stat-card"><div class="stat-val" id="statPerf" style="font-size:1.3rem;">&#8212;</div><div class="stat-lbl">Performance</div></div>
-  </div>
+      <div class="sidebar__footer">
+        <button class="theme-toggle-card" id="themeToggleCard" type="button">
+          <span><i class="fa-solid fa-circle-half-stroke"></i> Appearance</span>
+          <strong id="themeLabel">Light</strong>
+        </button>
 
-  <div class="card">
-    <h2>&#128200; SGPA Trend</h2>
-    <p class="info" id="noChartMsg">No data yet. Save a semester to see your trend.</p>
-    <canvas id="sgpaChart" style="display:none;"></canvas>
-  </div>
-
-  <div class="card">
-    <h2>&#128203; Semester History</h2>
-    <div class="btn-row" style="margin-bottom:14px;">
-      <button class="btn btn-primary" onclick="openAddModal()">+ Add Semester</button>
-      <button class="btn btn-outline" onclick="exportDashboardPDF()">Export PDF</button>
-      <button class="btn btn-outline" onclick="exportDashboardCSV()">Export CSV</button>
-    </div>
-    <div class="semester-list" id="semHistory"><p class="info">Loading...</p></div>
-  </div>
-
-  <!-- Edit/Add Modal -->
-  <div id="editModal" class="modal" style="display:none;">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3 id="modalTitle">Edit Semester</h3>
-        <button class="modal-close" onclick="closeModal()">&#x2715;</button>
-      </div>
-      <div class="modal-body">
-        <div class="form-group">
-          <label>Semester Name</label>
-          <input type="text" id="editSemName" placeholder="Semester 1" />
-        </div>
-        <div class="subject-header">
-          <span>Subject Name</span>
-          <span>Credits</span>
-          <span>Grade</span>
-          <span></span>
-        </div>
-        <div id="editSubjectRows"></div>
-        <button class="btn btn-outline btn-sm" onclick="addSubject()">+ Add Subject</button>
-      </div>
-      <div id="editError" class="error"></div>
-      <div class="modal-footer">
-        <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
-        <button class="btn btn-primary" onclick="saveSemester()">Save Changes</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Profile Modal -->
-  <div id="profileModal" class="modal" style="display:none;">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3>My Profile</h3>
-        <button class="modal-close" onclick="closeProfileModal()">&#x2715;</button>
-      </div>
-      <div class="modal-body">
-        <div style="text-align:center;margin-bottom:20px;">
-          <div class="profile-image" style="width:100px;height:100px;margin:0 auto 12px;border-radius:50%;border:3px solid var(--primary);overflow:hidden;flex-shrink:0;">
-            <img id="modalProfileImage" src="https://i.pravatar.cc/150?u=placeholder" alt="Profile" style="width:100%;height:100%;object-fit:cover;display:block;"/>
+        <div class="sidebar-user">
+          <img id="sidebarAvatar" class="sidebar-user__avatar" src="https://api.dicebear.com/8.x/thumbs/svg?seed=Student" alt="Student avatar" />
+          <div class="sidebar-user__meta">
+            <strong id="sidebarName">Student Name</strong>
+            <span><span id="sidebarRegulation">R23</span> | <span id="sidebarBranch">CSE</span></span>
           </div>
-          <button class="btn btn-outline btn-sm" type="button" onclick="triggerProfileImageUpload()">📷 Change Photo</button>
-          <input type="file" id="profileImageInput" accept="image/*" style="display:none;" />
-        </div>
-        <div class="form-group">
-          <label>Name</label>
-          <input type="text" id="profileName" placeholder="Your Name" />
-        </div>
-        <div class="form-group">
-          <label>Roll Number</label>
-          <input type="text" id="profileRoll" placeholder="Your Roll No" />
-        </div>
-        <div class="form-group">
-          <label>Branch</label>
-          <input type="text" id="profileBranch" placeholder="Your Branch" />
-        </div>
-        <div class="form-group">
-          <label>Email</label>
-          <input type="email" id="profileEmail" placeholder="you@example.com" readonly />
         </div>
       </div>
-      <div id="profileMsg" class="info" style="margin:10px 0;"></div>
-      <div class="modal-footer">
-        <button class="btn btn-outline" onclick="closeProfileModal()">Close</button>
-        <button class="btn btn-primary" onclick="saveProfile()">Save Profile</button>
-      </div>
-    </div>
+    </aside>
+
+    <div class="overlay" id="overlay"></div>
+
+    <main class="main">
+      <header class="topbar glass">
+        <div class="topbar__left">
+          <button class="menu-btn" id="menuBtn" type="button" aria-label="Open navigation" aria-expanded="false">
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
+          <div>
+            <p class="topbar__eyebrow">Overview</p>
+            <h2>Dashboard</h2>
+          </div>
+        </div>
+
+        <div class="topbar__right">
+          <span class="reg-badge" id="regBadge">R23</span>
+          <button class="icon-btn notification-btn" type="button" aria-label="Notifications">
+            <i class="fa-regular fa-bell"></i>
+            <span class="notification-dot">3</span>
+          </button>
+        </div>
+      </header>
+
+      <section class="hero-card glass">
+        <div class="hero-card__content">
+          <div class="hero-card__text">
+            <p class="hero-card__eyebrow">Student Snapshot</p>
+            <h3>Welcome back, <span id="heroName">Student</span></h3>
+            <div class="hero-meta">
+              <span><i class="fa-regular fa-id-card"></i> <span id="heroHallTicket">23A91A05N2</span></span>
+              <span><i class="fa-solid fa-code-branch"></i> <span id="heroBranch">Computer Science and Engineering</span></span>
+              <span><i class="fa-solid fa-file-lines"></i> <span id="heroRegulation">R23</span></span>
+            </div>
+          </div>
+
+          <div class="hero-card__cgpa">
+            <span>Current CGPA</span>
+            <strong id="heroCgpa">0.00</strong>
+            <small id="heroCgpaLabel">Start adding semester grades</small>
+          </div>
+        </div>
+      </section>
+
+      <section class="stats-grid" id="statsGrid">
+        <article class="stat-card glass">
+          <div class="stat-card__icon blue"><i class="fa-solid fa-chart-simple"></i></div>
+          <div>
+            <span>CGPA</span>
+            <strong id="statCgpa">0.00</strong>
+          </div>
+        </article>
+
+        <article class="stat-card glass">
+          <div class="stat-card__icon cyan"><i class="fa-solid fa-percent"></i></div>
+          <div>
+            <span>Percentage</span>
+            <strong id="statPercentage">0.0%</strong>
+          </div>
+        </article>
+
+        <article class="stat-card glass">
+          <div class="stat-card__icon violet"><i class="fa-solid fa-book-open-reader"></i></div>
+          <div>
+            <span>Total Credits</span>
+            <strong id="statCredits">0</strong>
+          </div>
+        </article>
+
+        <article class="stat-card glass">
+          <div class="stat-card__icon amber"><i class="fa-solid fa-circle-exclamation"></i></div>
+          <div>
+            <span>Backlogs</span>
+            <strong id="statBacklogs">0</strong>
+          </div>
+        </article>
+      </section>
+
+      <section class="content-grid">
+        <article class="panel glass">
+          <div class="panel__header">
+            <div>
+              <p class="section-eyebrow">Semester SGPA</p>
+              <h3><i class="fa-solid fa-layer-group"></i> Recent Semesters</h3>
+            </div>
+            <a class="text-link" href="my-semesters.html">View All</a>
+          </div>
+
+          <div id="recentSemesters"></div>
+          <div class="empty-state" id="recentSemestersEmpty">
+            <div class="empty-state__icon"><i class="fa-regular fa-folder-open"></i></div>
+            <h4>No semester grades yet</h4>
+            <p>Add your subject grades to start tracking SGPA and CGPA trends.</p>
+            <a class="primary-btn" href="my-semesters.html">
+              <i class="fa-solid fa-plus"></i>
+              Add Grades
+            </a>
+          </div>
+        </article>
+
+        <article class="panel glass">
+          <div class="panel__header">
+            <div>
+              <p class="section-eyebrow">Analytics</p>
+              <h3><i class="fa-solid fa-chart-line"></i> SGPA Trend</h3>
+            </div>
+          </div>
+
+          <div class="chart-wrap">
+            <canvas id="trendChart"></canvas>
+          </div>
+          <p class="chart-summary" id="chartSummary">Your academic graph will appear here once you save semesters.</p>
+        </article>
+      </section>
+    </main>
   </div>
 
-  <div class="feature-grid">
-    <div class="feature-card">
-      <div class="icon">&#128202;</div><h3>SGPA Calculator</h3>
-      <p>Calculate your semester GPA.</p>
-      <div class="btn-row" style="justify-content:center;margin-top:10px;">
-        <a href="sgpa.html" class="btn btn-primary btn-sm">Open</a>
-      </div>
-    </div>
-    <div class="feature-card">
-      <div class="icon">&#128200;</div><h3>CGPA Calculator</h3>
-      <p>View and compute your CGPA.</p>
-      <div class="btn-row" style="justify-content:center;margin-top:10px;">
-        <a href="cgpa.html" class="btn btn-primary btn-sm">Open</a>
-      </div>
-    </div>
-  </div>
-</div>
-</div>
-</div>
-</div>
-
-<script type="module">
-  import { requireAuth, getSemesters, getSemester, saveSemester, deleteSemester, saveUserProfile, getUserProfile, updateUserProfile, gradePerformance, GRADE_POINTS, toggleDark, logout, initDarkMode, setActiveNav, pdfNewPageIfNeeded } from "./app.js";
-  initDarkMode();
-  setActiveNav();
-
-  const $ = id => document.getElementById(id);
-  const menuToggleBtn = $("menuToggleBtn");
-  const sidebar = $("appSidebar");
-  const sidebarOverlay = $("sidebarOverlay");
-  const sidebarCloseBtn = $("sidebarCloseBtn");
-  const sidebarThemeToggle = $("sidebarThemeToggle");
-  const topbarProfileBtn = $("topbarProfileBtn");
-  const profileNavLink = $("profileNavLink");
-  const sidebarLogoutLink = $("sidebarLogoutLink");
-  const dropdownLogoutBtn = $("dropdownLogoutBtn");
-  const openProfileFromDropdown = $("openProfileFromDropdown");
-  const sidebarUserArrow = $("sidebarUserArrow");
-  const sidebarUserDropdown = $("sidebarUserDropdown");
-  const semesterCountBadge = $("semesterCountBadge");
-
-  document.getElementById("darkToggleBtn").addEventListener("click", () => {
-    toggleDark();
-    syncThemeUI();
-  });
-  document.getElementById("logoutBtn").addEventListener("click", logout);
-  sidebarThemeToggle.addEventListener("click", () => {
-    toggleDark();
-    syncThemeUI();
-  });
-  sidebarLogoutLink.addEventListener("click", event => {
-    event.preventDefault();
-    logout();
-  });
-  dropdownLogoutBtn.addEventListener("click", logout);
-  topbarProfileBtn.addEventListener("click", () => openProfileModal());
-  openProfileFromDropdown.addEventListener("click", () => openProfileModal());
-  profileNavLink.addEventListener("click", event => {
-    event.preventDefault();
-    openProfileModal();
-    closeSidebar();
-  });
-  menuToggleBtn.addEventListener("click", toggleSidebar);
-  sidebarCloseBtn.addEventListener("click", closeSidebar);
-  sidebarOverlay.addEventListener("click", closeSidebar);
-  sidebarUserArrow.addEventListener("click", () => {
-    sidebarUserDropdown.classList.toggle("open");
-  });
-  document.querySelectorAll(".sidebar-nav a").forEach(link => {
-    link.addEventListener("click", () => {
-      if (window.innerWidth < 1024) closeSidebar();
-    });
-  });
-  document.addEventListener("keydown", event => {
-    if (event.key === "Escape") {
-      closeSidebar();
-      sidebarUserDropdown.classList.remove("open");
-    }
-  });
-  document.addEventListener("click", event => {
-    if (!sidebarUserDropdown.contains(event.target) && !sidebarUserArrow.contains(event.target)) {
-      sidebarUserDropdown.classList.remove("open");
-    }
-  });
-
-  syncThemeUI();
-
-  let chartInst = null;
-  let uid = null;
-  let currentUser = null;
-  let allSemesters = [];
-  let editingSem = null;
-  let subjectCount = 0;
-  let profileImageData = null;
-
-  requireAuth(async user => {
-    currentUser = user;
-    uid = user.uid;
-    document.getElementById("userChip").textContent = user.email;
-    document.getElementById("userName").textContent = user.displayName || user.email.split("@")[0];
-    $("heroUserName").textContent = user.displayName || user.email.split("@")[0];
-    $("sidebarUserName").textContent = user.displayName || user.email.split("@")[0];
-    await loadProfile();
-    try {
-      allSemesters = await getSemesters(uid);
-      hideDataAccessNotice();
-      renderStats(allSemesters);
-      renderChart(allSemesters);
-      renderHistory(allSemesters);
-    } catch (error) {
-      console.error("Semester load error:", error);
-      allSemesters = [];
-      renderStats(allSemesters);
-      renderChart(allSemesters);
-      renderHistory(allSemesters);
-      if (isPermissionDenied(error)) {
-        showDataAccessNotice("Firestore blocked access to your semester data. Update your Firebase rules so signed-in users can read their own documents.");
-      } else {
-        showDataAccessNotice("Unable to load semester data right now. Please try again in a moment.");
-      }
-    }
-  });
-
-  function isPermissionDenied(error) {
-    return error?.code === "permission-denied" || error?.message?.includes("Missing or insufficient permissions");
-  }
-
-  function showDataAccessNotice(message) {
-    $("dataAccessNoticeText").textContent = message;
-    $("dataAccessNotice").style.display = "block";
-  }
-
-  function hideDataAccessNotice() {
-    $("dataAccessNotice").style.display = "none";
-  }
-
-  function toggleSidebar() {
-    const open = !sidebar.classList.contains("open");
-    sidebar.classList.toggle("open", open);
-    sidebarOverlay.classList.toggle("open", open);
-    menuToggleBtn.classList.toggle("is-open", open);
-    menuToggleBtn.setAttribute("aria-expanded", String(open));
-  }
-
-  function closeSidebar() {
-    sidebar.classList.remove("open");
-    sidebarOverlay.classList.remove("open");
-    menuToggleBtn.classList.remove("is-open");
-    menuToggleBtn.setAttribute("aria-expanded", "false");
-  }
-
-  function syncThemeUI() {
-    const theme = document.documentElement.getAttribute("data-theme") || "light";
-    $("themeLabel").textContent = theme === "dark" ? "Dark" : "Light";
-  }
-
-  function updateProfileSurfaces({ name, branch, regulation, photoURL }) {
-    if (name) {
-      $("userName").textContent = name;
-      $("heroUserName").textContent = name;
-      $("sidebarUserName").textContent = name;
-    }
-    if (branch) {
-      $("sidebarBranch").textContent = branch;
-    }
-    if (regulation) {
-      $("sidebarRegulation").textContent = regulation;
-      $("headerRegBadge").textContent = regulation;
-    }
-    if (photoURL) {
-      $("headerProfileImage").src = photoURL;
-      $("topbarProfileImage").src = photoURL;
-      $("sidebarProfileImage").src = photoURL;
-      $("modalProfileImage").src = photoURL;
-    }
-  }
-
-  async function loadProfile() {
-    try {
-      const profile = await getUserProfile(uid);
-      const name = profile?.name || currentUser.displayName || "";
-      const branch = profile?.branch || "";
-      const regulation = profile?.regulation || "R23";
-      profileImageData = profile?.photoURL || currentUser.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(currentUser.email || 'user')}`;
-      document.getElementById("profileName").value  = name;
-      document.getElementById("profileRoll").value  = profile?.roll   || "";
-      document.getElementById("profileBranch").value = branch;
-      document.getElementById("profileEmail").value  = currentUser.email || "";
-      updateProfileSurfaces({
-        name: name || currentUser.email.split("@")[0],
-        branch: branch || "Branch",
-        regulation,
-        photoURL: profileImageData
-      });
-    } catch (error) {
-      console.error("Profile load error:", error);
-      const name = currentUser.displayName || currentUser.email.split("@")[0] || "";
-      document.getElementById("profileName").value = name;
-      const fallbackUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(currentUser.email || 'user')}`;
-      profileImageData = fallbackUrl;
-      updateProfileSurfaces({
-        name,
-        branch: "Branch",
-        regulation: "R23",
-        photoURL: fallbackUrl
-      });
-    }
-  }
-
-  window.triggerProfileImageUpload = () => {
-    document.getElementById("profileImageInput").click();
-  };
-
-  document.getElementById("profileImageInput").addEventListener("change", async event => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith("image/")) {
-      alert("Please select a valid image file.");
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = () => {
-      profileImageData = reader.result;
-      document.getElementById("profileImage").src = profileImageData;
-      updateProfileSurfaces({ photoURL: profileImageData });
-    };
-    reader.readAsDataURL(file);
-  });
-
-  window.saveProfile = async () => {
-    const msg = document.getElementById("profileMsg");
-    msg.textContent = "Saving...";
-    try {
-      const name   = document.getElementById("profileName").value.trim();
-      const roll   = document.getElementById("profileRoll").value.trim();
-      const branch = document.getElementById("profileBranch").value.trim();
-      if (!name || !roll || !branch) {
-        msg.textContent = "Please fill in all profile fields.";
-        return;
-      }
-      await saveUserProfile(uid, { name, roll, branch, email: currentUser.email, photoURL: profileImageData });
-      if (currentUser.displayName !== name) {
-        await updateUserProfile({ displayName: name });
-      }
-      updateProfileSurfaces({ name, branch, photoURL: profileImageData });
-      msg.textContent = "Profile saved successfully.";
-    } catch (error) {
-      console.error("Profile save error:", error);
-      msg.textContent = "Failed to save profile. Please try again.";
-    }
-  };
-
-  function renderStats(sems) {
-    semesterCountBadge.textContent = sems.length;
-    if (!sems.length) return;
-    const tw = sems.reduce((s,x) => s + parseFloat(x.sgpa)*x.credits, 0);
-    const tc = sems.reduce((s,x) => s + x.credits, 0);
-    const cgpa = parseFloat((tw/tc).toFixed(2));
-    document.getElementById("statSems").textContent    = sems.length;
-    document.getElementById("statCGPA").textContent    = cgpa.toFixed(2);
-    document.getElementById("statCredits").textContent = tc;
-    document.getElementById("statPerf").textContent    = gradePerformance(cgpa);
-  }
-
-  function renderChart(sems) {
-    const canvas = document.getElementById("sgpaChart");
-    const msg    = document.getElementById("noChartMsg");
-    if (!sems.length) { msg.style.display=""; canvas.style.display="none"; return; }
-    msg.style.display  = "none";
-    canvas.style.display = "";
-    if (chartInst) chartInst.destroy();
-    const dark  = document.documentElement.getAttribute("data-theme") === "dark";
-    const color = dark ? "#818cf8" : "#4f46e5";
-    const grid  = dark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.06)";
-    const tick  = dark ? "#94a3b8" : "#6b7280";
-    chartInst = new Chart(canvas, {
-      type: "line",
-      data: {
-        labels: sems.map(s => s.sem.replace("Semester ","Sem ")),
-        datasets: [{
-          data: sems.map(s => parseFloat(s.sgpa)),
-          borderColor: color,
-          backgroundColor: dark ? "rgba(129,140,248,0.1)" : "rgba(79,70,229,0.08)",
-          borderWidth: 2.5, pointRadius: 5, pointBackgroundColor: color,
-          tension: 0.35, fill: true
-        }]
-      },
-      options: {
-        responsive: true,
-        plugins: {
-          legend: { display: false },
-          tooltip: { callbacks: { label: c => " SGPA: " + c.parsed.y.toFixed(2) } }
-        },
-        scales: {
-          y: { min:0, max:10, ticks:{ stepSize:1, color:tick }, grid:{ color:grid } },
-          x: { ticks:{ color:tick }, grid:{ color:grid } }
-        }
-      }
-    });
-  }
-
-  function renderHistory(sems) {
-    const el = document.getElementById("semHistory");
-    if (!sems.length) { el.innerHTML = '<p class="info">No semesters saved yet.</p>'; return; }
-    el.innerHTML = sems.map(s => {
-      const encoded = encodeURIComponent(s.sem);
-      return `
-      <div class="sem-item">
-        <div class="sem-info">
-          <span>${s.sem}</span>
-          <span class="badge">${s.credits} cr</span>
-        </div>
-        <div class="sem-actions">
-          <span class="sgpa-val">SGPA: ${parseFloat(s.sgpa).toFixed(2)}</span>
-          <button class="btn btn-outline btn-sm" data-edit-sem="${encoded}">Edit</button>
-          <button class="btn btn-outline btn-sm" data-export-pdf="${encoded}">PDF</button>
-          <button class="btn btn-outline btn-sm" data-export-csv="${encoded}">CSV</button>
-          <button class="remove-btn" data-delete-sem="${encoded}">&#x2715;</button>
-        </div>
-      </div>`;
-    }).join("");
-
-    el.querySelectorAll("[data-edit-sem]").forEach(btn => {
-      btn.addEventListener("click", () => openEditModal(decodeURIComponent(btn.dataset.editSem)));
-    });
-    el.querySelectorAll("[data-delete-sem]").forEach(btn => {
-      btn.addEventListener("click", () => delSem(decodeURIComponent(btn.dataset.deleteSem)));
-    });
-    el.querySelectorAll("[data-export-pdf]").forEach(btn => {
-      btn.addEventListener("click", () => exportSemesterPDF(decodeURIComponent(btn.dataset.exportPdf)));
-    });
-    el.querySelectorAll("[data-export-csv]").forEach(btn => {
-      btn.addEventListener("click", () => exportSemesterCSV(decodeURIComponent(btn.dataset.exportCsv)));
-    });
-  }
-
-  window.openEditModal = async (sem) => {
-    editingSem = sem;
-    document.getElementById("modalTitle").textContent = "Edit " + sem;
-    const semInput = document.getElementById("editSemName");
-    semInput.value = sem;
-    semInput.readOnly = true;
-    document.getElementById("editSubjectRows").innerHTML = "";
-    document.getElementById("editError").textContent = "";
-    subjectCount = 0;
-
-    const data = await getSemester(uid, sem);
-    if (data && data.subjects && data.subjects.length) {
-      data.subjects.forEach(s => addSubject(s));
-    } else {
-      addSubject();
-      addSubject();
-    }
-    document.getElementById("editModal").style.display = "flex";
-  };
-
-  window.openAddModal = () => {
-    editingSem = null;
-    document.getElementById("modalTitle").textContent = "Add New Semester";
-    const semInput = document.getElementById("editSemName");
-    semInput.value = "";
-    semInput.readOnly = false;
-    document.getElementById("editSubjectRows").innerHTML = "";
-    document.getElementById("editError").textContent = "";
-    subjectCount = 0;
-    addSubject();
-    addSubject();
-    document.getElementById("editModal").style.display = "flex";
-  };
-
-  window.closeModal = () => {
-    document.getElementById("editModal").style.display = "none";
-  };
-
-  window.openProfileModal = () => {
-    document.getElementById("profileModal").style.display = "flex";
-  };
-
-  window.closeProfileModal = () => {
-    document.getElementById("profileModal").style.display = "none";
-  };
-
-  window.addSubject = (prefill) => {
-    subjectCount++;
-    const id = subjectCount;
-    const row = document.createElement("div");
-    row.className = "subject-row";
-    row.id = "sub-row-" + id;
-    row.innerHTML =
-      '<div class="sub-name"><label>Subject Name</label>' +
-      '<input type="text" placeholder="e.g. Mathematics" id="sub-name-' + id + '"/>' +
-      '</div>' +
-      '<div><label>Credits</label>' +
-      '<input type="number" min="1" max="6" placeholder="1-6" id="sub-credit-' + id + '"/>' +
-      '</div>' +
-      '<div><label>Grade</label>' +
-      '<select id="sub-grade-' + id + '"><option value="">Grade</option>' +
-      '<option>S</option><option>A</option><option>B</option><option>C</option>' +
-      '<option>D</option><option>E</option><option>F</option><option>Ab</option></select>' +
-      '</div>' +
-      '<button class="remove-btn" type="button" onclick="removeSubject(' + id + ')">&#x2715;</button>';
-    document.getElementById("editSubjectRows").appendChild(row);
-    if (prefill) {
-      document.getElementById("sub-name-" + id).value   = prefill.name   || "";
-      document.getElementById("sub-credit-" + id).value = prefill.credit || "";
-      document.getElementById("sub-grade-" + id).value  = prefill.grade  || "";
-    }
-  };
-
-  window.removeSubject = id => document.getElementById("sub-row-" + id)?.remove();
-
-  window.saveSemester = async () => {
-    const err = document.getElementById("editError");
-    err.textContent = "";
-    const semName = document.getElementById("editSemName").value.trim();
-    if (!semName) { err.textContent = "Please enter semester name."; return; }
-
-    const rows = document.querySelectorAll("#editSubjectRows .subject-row");
-    if (!rows.length) { err.textContent = "Add at least one subject."; return; }
-
-    const existingSem = allSemesters.find(s => s.sem === semName);
-    if (!editingSem && existingSem) {
-      err.textContent = "This semester already exists. Edit it from history instead.";
-      return;
-    }
-
-    let tc = 0, tp = 0, valid = true;
-    const subjects = [];
-    rows.forEach(row => {
-      const id = row.id.split("-")[2];
-      const nm = document.getElementById("sub-name-" + id).value.trim();
-      const cr = parseFloat(document.getElementById("sub-credit-" + id).value);
-      const gr = document.getElementById("sub-grade-" + id).value;
-      if (!nm || !cr || cr < 1 || cr > 6 || !gr) { valid = false; }
-      else { tc += cr; tp += cr * GRADE_POINTS[gr]; subjects.push({ name: nm, credit: cr, grade: gr }); }
-    });
-    if (!valid) { err.textContent = "Fill all subject fields correctly with valid credits and grade."; return; }
-
-    const sgpa = parseFloat((tp/tc).toFixed(2));
-    const data = { sem: semName, sgpa, credits: tc, subjects };
-
-    if (editingSem && editingSem !== semName) {
-      await deleteSemester(uid, editingSem);
-    }
-
-    await saveSemester(uid, data);
-    const sems = await getSemesters(uid);
-    allSemesters = sems;
-    renderStats(sems);
-    renderChart(sems);
-    renderHistory(sems);
-    closeModal();
-  };
-
-  window.delSem = async sem => {
-    if (!confirm("Delete " + sem + "?")) return;
-    await deleteSemester(uid, sem);
-    const sems = await getSemesters(uid);
-    allSemesters = sems;
-    renderStats(sems);
-    renderChart(sems);
-    renderHistory(sems);
-  };
-
-  window.exportDashboardCSV = () => {
-    if (!allSemesters.length) {
-      alert("No semester data available to export.");
-      return;
-    }
-    let csv = "Semester,Credits,SGPA,Subjects\n";
-    allSemesters.forEach(sem => {
-      const subjectCount = sem.subjects ? sem.subjects.length : 0;
-      csv += `${sem.sem},${sem.credits},${parseFloat(sem.sgpa).toFixed(2)},${subjectCount}\n`;
-    });
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `Dashboard_Semesters_${new Date().toISOString().slice(0,10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  window.exportDashboardPDF = () => {
-    if (!allSemesters.length) {
-      alert("No semester data available to export.");
-      return;
-    }
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ unit: "pt", format: "a4" });
-    doc.setFontSize(14);
-    doc.text("SGPA & CGPA Dashboard Export", 40, 40);
-    doc.setFontSize(10);
-    doc.text(`Export date: ${new Date().toLocaleDateString()}`, 40, 56);
-    doc.text(`Total Semesters: ${allSemesters.length}`, 40, 72);
-    doc.setLineWidth(0.5);
-    doc.line(40, 80, 555, 80);
-
-    let y = 100;
-    doc.setFontSize(10);
-    doc.text("Semester", 40, y);
-    doc.text("SGPA", 200, y);
-    doc.text("Credits", 280, y);
-    doc.text("Subjects", 360, y);
-    doc.text("Performance", 460, y);
-    y += 10;
-    doc.line(40, y, 555, y);
-    y += 18;
-
-    allSemesters.forEach(sem => {
-      if (y > 740) {
-        doc.addPage();
-        y = 60;
-      }
-      doc.text(sem.sem, 40, y);
-      doc.text(parseFloat(sem.sgpa).toFixed(2), 200, y);
-      doc.text(String(sem.credits), 280, y);
-      doc.text(String(sem.subjects ? sem.subjects.length : 0), 360, y);
-      doc.text(gradePerformance(parseFloat(sem.sgpa)), 460, y);
-      y += 18;
-    });
-
-    doc.save(`Dashboard_Semesters_${new Date().toISOString().slice(0,10)}.pdf`);
-  };
-
-  window.exportSemesterCSV = async semName => {
-    const semester = allSemesters.find(s => s.sem === semName);
-    if (!semester) { alert("Semester not found."); return; }
-    const rows = semester.subjects || [];
-    let csv = "Subject,Credits,Grade,Points,Status\n";
-    rows.forEach(sub => {
-      const points = GRADE_POINTS[sub.grade] || 0;
-      const status = ["F", "Ab"].includes(sub.grade) ? "Fail" : "Pass";
-      csv += `"${sub.name}",${sub.credit},${sub.grade},${points},${status}\n`;
-    });
-    csv += `\nSemester,${semester.sem}\nSGPA,${parseFloat(semester.sgpa).toFixed(2)}\nCredits,${semester.credits}\nSubjects,${rows.length}\n`;
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `Semester_${semester.sem.replace(/\s+/g, "_")}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  window.exportSemesterPDF = async semName => {
-    const semester = allSemesters.find(s => s.sem === semName);
-    if (!semester) { alert("Semester not found."); return; }
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ unit: "pt", format: "a4" });
-    doc.setFontSize(14);
-    doc.text("SGPA & CGPA Semester Export", 40, 40);
-    doc.setFontSize(10);
-    doc.text(`Semester: ${semester.sem}`, 40, 60);
-    doc.text(`SGPA: ${parseFloat(semester.sgpa).toFixed(2)}`, 40, 76);
-    doc.text(`Credits: ${semester.credits}`, 40, 92);
-    doc.text(`Subjects: ${semester.subjects ? semester.subjects.length : 0}`, 40, 108);
-    doc.setLineWidth(0.5);
-    doc.line(40, 120, 555, 120);
-
-    let y = 140;
-    doc.setFontSize(10);
-    doc.text("S.no", 40, y);
-    doc.text("Subject", 80, y);
-    doc.text("Credits", 320, y);
-    doc.text("Grade", 400, y);
-    doc.text("Points", 460, y);
-    doc.text("Status", 520, y);
-    y += 12;
-    doc.line(40, y, 555, y);
-    y += 18;
-
-    (semester.subjects || []).forEach((sub, index) => {
-      if (y > 740) {
-        doc.addPage();
-        y = 60;
-      }
-      const status = ["F", "Ab"].includes(sub.grade) ? "Fail" : "Pass";
-      doc.text(String(index + 1), 40, y);
-      doc.text(sub.name || "Subject", 80, y);
-      doc.text(String(sub.credit), 320, y);
-      doc.text(sub.grade, 400, y);
-      doc.text(String(GRADE_POINTS[sub.grade] || 0), 460, y);
-      doc.text(status, 520, y);
-      y += 18;
-    });
-
-    doc.save(`Semester_${semester.sem.replace(/\s+/g, "_")}.pdf`);
-  };
-</script>
+  <script type="module" src="academic-dashboard.js"></script>
 </body>
 </html>
