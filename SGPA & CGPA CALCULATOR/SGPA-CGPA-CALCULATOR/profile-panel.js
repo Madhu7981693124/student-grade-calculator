@@ -14,16 +14,17 @@ const EMPTY_PROFILE = {
   phone: "",
   collegeName: "",
   gender: "",
-  dob: "",
-  avatar: ""
+  dob: ""
 };
+
+const REGULATION_OPTIONS = ["R23", "R20"];
 
 const FIELD_CONFIG = [
   { key: "fullName", label: "Full Name", type: "text", required: true, placeholder: "Enter your full name" },
   { key: "email", label: "Email", type: "email", required: false, placeholder: "Email address", readOnly: true },
   { key: "hallTicket", label: "Hall Ticket Number", type: "text", required: false, placeholder: "Hall ticket number", readOnly: true },
   { key: "branch", label: "Branch", type: "text", required: true, placeholder: "Enter your branch" },
-  { key: "regulation", label: "Regulation", type: "text", required: true, placeholder: "Ex: R23" },
+  { key: "regulation", label: "Regulation", type: "select", required: true, options: REGULATION_OPTIONS, readOnly: true },
   { key: "joiningYear", label: "Year of Joining", type: "number", required: true, placeholder: "Ex: 2023" },
   { key: "phone", label: "Phone Number", type: "tel", required: true, placeholder: "Enter your phone number" },
   { key: "collegeName", label: "College Name", type: "text", required: false, placeholder: "Enter your college name" },
@@ -51,19 +52,21 @@ const FIELD_GROUPS = [
 
 function normalizeProfile(rawProfile) {
   const profile = rawProfile || {};
+  const regulation = REGULATION_OPTIONS.includes(String(profile.regulation || "").trim().toUpperCase())
+    ? String(profile.regulation || "").trim().toUpperCase()
+    : "R23";
   return {
     ...EMPTY_PROFILE,
     fullName: profile.fullName || profile.name || "",
     email: profile.email || "",
     hallTicket: profile.hallTicket || profile.roll || "",
     branch: profile.branch || "",
-    regulation: profile.regulation || "",
+    regulation,
     joiningYear: profile.joiningYear ? String(profile.joiningYear) : "",
     phone: profile.phone || "",
     collegeName: profile.collegeName || "",
     gender: profile.gender || "",
-    dob: profile.dob || "",
-    avatar: profile.avatar || profile.photoURL || ""
+    dob: profile.dob || ""
   };
 }
 
@@ -79,6 +82,9 @@ function validateProfile(profile) {
   if (!profile.fullName.trim()) errors.fullName = "Full name is required.";
   if (!profile.branch.trim()) errors.branch = "Branch is required.";
   if (!profile.regulation.trim()) errors.regulation = "Regulation is required.";
+  if (profile.regulation.trim() && !REGULATION_OPTIONS.includes(profile.regulation.trim().toUpperCase())) {
+    errors.regulation = "Only R23 and R20 are supported.";
+  }
 
   if (!profile.joiningYear.trim()) {
     errors.joiningYear = "Joining year is required.";
@@ -109,9 +115,9 @@ function placeholderFor(value, fallback = "Not available") {
   return value ? value : fallback;
 }
 
-function profileCoreChanged(profile, draft) {
-  const keys = ["fullName", "email", "hallTicket", "branch", "regulation", "joiningYear", "phone", "collegeName", "gender", "dob"];
-  return keys.some(key => String(profile[key] || "") !== String(draft[key] || ""));
+function avatarLetter(fullName) {
+  const trimmedName = String(fullName || "").trim();
+  return trimmedName ? trimmedName.charAt(0).toUpperCase() : "S";
 }
 
 function badgeTone(completion) {
@@ -242,9 +248,7 @@ function ProfilePanel(props) {
     saveProfile,
     refreshKey,
     summary,
-    statusMessage,
-    onPhotoSelect,
-    onCancelEdit
+    statusMessage
   } = props;
 
   const [profile, setProfile] = useState(EMPTY_PROFILE);
@@ -254,7 +258,6 @@ function ProfilePanel(props) {
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState(false);
   const [status, setStatus] = useState(statusMessage || "Fetching your profile...");
-  const [photoPreview, setPhotoPreview] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -281,7 +284,6 @@ function ProfilePanel(props) {
         if (active) {
           setLoading(false);
           setEditing(false);
-          setPhotoPreview("");
         }
       }
     }
@@ -299,7 +301,7 @@ function ProfilePanel(props) {
   }, [statusMessage, loading]);
 
   const completion = useMemo(() => profileCompletion(draft), [draft]);
-  const avatar = photoPreview || draft.avatar || "https://api.dicebear.com/8.x/thumbs/svg?seed=Student";
+  const avatar = avatarLetter(draft.fullName);
   const badgeClass = badgeTone(completion);
   const summaryCards = [
     {
@@ -344,23 +346,20 @@ function ProfilePanel(props) {
     setDraft(profile);
     setErrors({});
     setEditing(false);
-    setPhotoPreview("");
     setStatus("Changes discarded.");
-    onCancelEdit?.();
   }
 
   async function handleSave() {
-    const photoOnlyChange = Boolean(photoPreview) && !profileCoreChanged(profile, draft);
     const nextErrors = validateProfile(draft);
     setErrors(nextErrors);
-    if (Object.keys(nextErrors).length && !photoOnlyChange) {
+    if (Object.keys(nextErrors).length) {
       const firstError = Object.values(nextErrors)[0];
       setStatus(firstError || "Please complete the required profile fields before saving.");
       return;
     }
 
     setSaving(true);
-    setStatus(photoOnlyChange ? "Saving profile photo..." : "Saving profile changes...");
+    setStatus("Saving profile changes...");
 
     try {
       const response = await saveProfile?.(draft);
@@ -373,7 +372,6 @@ function ProfilePanel(props) {
       setProfile(normalized);
       setDraft(normalized);
       setEditing(false);
-      setPhotoPreview("");
       setStatus("Profile updated successfully.");
     } catch (error) {
       console.error("Profile panel save error:", error);
@@ -381,22 +379,6 @@ function ProfilePanel(props) {
     } finally {
       setSaving(false);
     }
-  }
-
-  function handlePhotoChange(event) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    onPhotoSelect?.(file);
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      const preview = String(reader.result || "");
-      setPhotoPreview(preview);
-      setDraft(current => ({ ...current, avatar: preview }));
-      setStatus("Profile photo selected. Save to upload it.");
-    };
-    reader.readAsDataURL(file);
   }
 
   if (loading) {
@@ -409,17 +391,8 @@ function ProfilePanel(props) {
         <div className="border-b border-white/10 pb-7">
           <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
             <div className="flex flex-col gap-5 lg:flex-row lg:items-center">
-              <div className="relative mx-auto lg:mx-0">
-                <img
-                  src=${avatar}
-                  alt="Student profile"
-                  className="h-28 w-28 rounded-[28px] border-4 border-sky-300/30 object-cover shadow-[0_0_0_12px_rgba(59,130,246,0.08)]"
-                />
-                <label className=${`absolute -bottom-2 right-0 inline-flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold transition ${editing ? "cursor-pointer border-sky-300/30 bg-sky-400 text-slate-950 hover:bg-sky-300" : "cursor-not-allowed border-white/10 bg-white/10 text-slate-300 opacity-70"}`}>
-                  <i className="fa-solid fa-camera"></i>
-                  Upload
-                  <input type="file" accept="image/*" className="hidden" disabled=${!editing} onChange=${handlePhotoChange} />
-                </label>
+              <div className="mx-auto grid h-28 w-28 place-items-center rounded-full border-4 border-sky-300/30 bg-gradient-to-br from-sky-400 via-blue-500 to-indigo-600 text-5xl font-black text-white shadow-[0_0_0_12px_rgba(59,130,246,0.08)] lg:mx-0" aria-label="Student profile avatar">
+                ${avatar}
               </div>
 
               <div className="text-center lg:text-left">

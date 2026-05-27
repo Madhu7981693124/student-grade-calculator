@@ -52,7 +52,7 @@
       </button>
 
       <div class="sidebar-profile glass-panel">
-        <img id="sidebarAvatar" class="sidebar-profile__avatar" src="https://api.dicebear.com/8.x/thumbs/svg?seed=Student" alt="Student avatar" />
+        <div id="sidebarAvatar" class="sidebar-profile__avatar" aria-label="Student avatar">S</div>
         <div class="sidebar-profile__meta">
           <strong id="sidebarName">Student Name</strong>
           <span id="sidebarRegulation">R23</span>
@@ -69,7 +69,7 @@
         </div>
 
         <button class="profile-chip" id="headerProfileBtn" type="button">
-          <img id="headerAvatar" src="https://api.dicebear.com/8.x/thumbs/svg?seed=Student" alt="Profile avatar" />
+          <div id="headerAvatar" class="profile-chip__avatar" aria-label="Profile avatar">S</div>
           <span class="profile-chip__text">
             <strong id="headerStudentName">Student Name</strong>
             <small><span id="headerDepartment">CSE</span> | <span id="regBadge">R23</span></small>
@@ -81,7 +81,7 @@
         <div class="info-banner__icon"><i class="fa-solid fa-circle-info"></i></div>
         <div>
           <strong>Official JNTUGV syllabus auto-fill</strong>
-          <p>Select a regulation and branch, then load verified semester subjects where official data is available.</p>
+          <p>Your account regulation is locked from signup. Select a branch and semester, then load verified subjects where official data is available.</p>
           <div class="syllabus-controls">
             <label class="syllabus-control">
               <span>Regulation</span>
@@ -95,7 +95,7 @@
               <span>Semester</span>
               <select id="syllabusSemesterSelect"></select>
             </label>
-            <button class="primary-action syllabus-action" id="applySyllabusBtn" type="button">
+            <button class="primary-action syllabus-action syllabus-action--hidden" id="applySyllabusBtn" type="button" aria-hidden="true">
               <i class="fa-solid fa-wand-magic-sparkles"></i>
               Load Subjects
             </button>
@@ -124,110 +124,7 @@
         </button>
       </div>
 
-      <div class="profile-sheet">
-        <div class="profile-photo-editor">
-          <img id="profileModalAvatar" class="profile-sheet__avatar" src="https://api.dicebear.com/8.x/thumbs/svg?seed=Student" alt="Profile avatar" />
-          <label class="photo-edit-btn" for="profilePhotoInput">
-            <i class="fa-solid fa-camera"></i>
-            Update Photo
-          </label>
-          <input id="profilePhotoInput" type="file" accept="image/*" hidden />
-        </div>
-        <div class="profile-sheet__grid">
-          <div class="profile-sheet__item profile-sheet__item--editable">
-            <span>Full Name</span>
-            <div class="profile-edit-row">
-              <input id="profileFieldName" class="profile-edit-input" type="text" disabled />
-              <button class="profile-edit-btn" data-edit-target="profileFieldName" type="button"><i class="fas fa-pen"></i></button>
-            </div>
-          </div>
-          <div class="profile-sheet__item">
-            <span>Email</span>
-            <strong id="profileModalEmail">student@example.com</strong>
-          </div>
-          <div class="profile-sheet__item">
-            <span>Hall Ticket Number</span>
-            <strong id="profileModalHallTicket">23A91A05N2</strong>
-          </div>
-          <div class="profile-sheet__item profile-sheet__item--editable">
-            <span>Branch</span>
-            <div class="profile-edit-row">
-              <input id="profileFieldBranch" class="profile-edit-input" type="text" disabled />
-              <button class="profile-edit-btn" data-edit-target="profileFieldBranch" type="button"><i class="fas fa-pen"></i></button>
-            </div>
-          </div>
-          <div class="profile-sheet__item profile-sheet__item--editable">
-            <span>Regulation</span>
-            <div class="profile-edit-row">
-              <input id="profileFieldRegulation" class="profile-edit-input" type="text" disabled />
-              <button class="profile-edit-btn" data-edit-target="profileFieldRegulation" type="button"><i class="fas fa-pen"></i></button>
-            </div>
-          </div>
-          <div class="profile-sheet__item profile-sheet__item--editable">
-            <span>Year of Joining</span>
-            <div class="profile-edit-row">
-              <input id="profileFieldJoiningYear" class="profile-edit-input" type="number" min="2000" max="2100" disabled />
-              <button class="profile-edit-btn" data-edit-target="profileFieldJoiningYear" type="button"><i class="fas fa-pen"></i></button>
-            </div>
-          </div>
-          <div class="profile-sheet__item profile-sheet__item--editable">
-            <span>Phone Number</span>
-            <div class="profile-edit-row">
-              <input id="profileFieldPhone" class="profile-edit-input" type="tel" disabled />
-              <button class="profile-edit-btn" data-edit-target="profileFieldPhone" type="button"><i class="fas fa-pen"></i></button>
-            </div>
-          </div>
-          <div class="profile-sheet__item profile-sheet__item--editable">
-            <span>College Name</span>
-            <div class="profile-edit-row">
-              <input id="profileFieldCollegeName" class="profile-edit-input" type="text" disabled />
-              <button class="profile-edit-btn" data-edit-target="profileFieldCollegeName" type="button"><i class="fas fa-pen"></i></button>
-            </div>
-          </div>
-          <div class="profile-sheet__item profile-sheet__item--editable">
-            <span>Gender</span>
-            <div class="profile-edit-row">
-              <select id="profileFieldGender" class="profile-edit-input" disabled>
-                <option value="">Select</option>
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-                <option value="Other">Other</option>
-              </select>
-              <button class="profile-edit-btn" data-edit-target="profileFieldGender" type="button"><i class="fas fa-pen"></i></button>
-            </div>
-          </div>
-          <div class="profile-sheet__item profile-sheet__item--editable">
-            <span>Date of Birth</span>
-            <div class="profile-edit-row">
-              <input id="profileFieldDob" class="profile-edit-input" type="date" disabled />
-              <button class="profile-edit-btn" data-edit-target="profileFieldDob" type="button"><i class="fas fa-pen"></i></button>
-            </div>
-          </div>
-          <div class="profile-sheet__item">
-            <span>Current CGPA</span>
-            <strong id="profileModalCgpa">0.00</strong>
-          </div>
-          <div class="profile-sheet__item">
-            <span>Total Credits</span>
-            <strong id="profileModalCredits">0</strong>
-          </div>
-          <div class="profile-sheet__item">
-            <span>Total Backlogs</span>
-            <strong id="profileModalBacklogs">0</strong>
-          </div>
-          <div class="profile-sheet__item">
-            <span>Semester Count</span>
-            <strong id="profileModalSemesterCount">0</strong>
-          </div>
-        </div>
-        <div class="profile-sheet__actions">
-          <div class="profile-save-status" id="profileSaveStatus">Profile synced with your account.</div>
-          <button class="save-action" id="saveProfileBtn" type="button">
-            <i class="fa-solid fa-floppy-disk"></i>
-            Save Changes
-          </button>
-        </div>
-      </div>
+      <div id="profileReactRoot" class="mt-5"></div>
     </div>
   </div>
 

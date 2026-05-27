@@ -52,7 +52,7 @@
       </button>
 
       <div class="sidebar-profile glass-panel">
-        <img id="sidebarAvatar" class="sidebar-profile__avatar" src="https://api.dicebear.com/8.x/thumbs/svg?seed=Student" alt="Student avatar" />
+        <div id="sidebarAvatar" class="sidebar-profile__avatar" aria-label="Student avatar">S</div>
         <div class="sidebar-profile__meta">
           <strong id="sidebarName">Student Name</strong>
           <span id="sidebarRegulation">R23</span>
@@ -69,7 +69,7 @@
         </div>
 
         <button class="profile-chip" id="headerProfileBtn" type="button">
-          <img id="headerAvatar" src="https://api.dicebear.com/8.x/thumbs/svg?seed=Student" alt="Profile avatar" />
+          <div id="headerAvatar" class="profile-chip__avatar" aria-label="Profile avatar">S</div>
           <span class="profile-chip__text">
             <strong id="headerStudentName">Student Name</strong>
             <small><span id="headerDepartment">CSE</span> | <span id="regBadge">R23</span></small>
@@ -115,8 +115,6 @@
             <select id="instantRegulationSelect">
               <option value="R23">R23</option>
               <option value="R20">R20</option>
-              <option value="R19">R19</option>
-              <option value="R16">R16</option>
             </select>
           </label>
           <div class="sgpa-actions">
@@ -138,7 +136,7 @@
             </button>
           </div>
         </div>
-        <p class="syllabus-status" id="instantSyllabusStatus">Choose branch, regulation, and semester to load the official subject list into this calculator.</p>
+        <p class="syllabus-status" id="instantSyllabusStatus">Choose branch and semester to load subjects for your account regulation.</p>
 
         <div class="sgpa-overview">
           <article class="sgpa-highlight glow-panel">

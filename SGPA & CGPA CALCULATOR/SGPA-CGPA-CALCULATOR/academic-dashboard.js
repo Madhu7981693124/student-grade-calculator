@@ -7,8 +7,7 @@ import {
   getUserSetting,
   saveUserSetting,
   saveUserProfile,
-  updateUserProfile,
-  uploadProfileImage
+  updateUserProfile
 } from "./app.js";
 import { mountProfilePanel } from "./profile-panel.js";
 import { CURRICULUM, BRANCH_OPTIONS, normalizeBranchCode } from "./curriculum-data.js";
@@ -17,7 +16,7 @@ const THEME_KEY = "theme";
 const SETTINGS_DOC_ID = "dashboard";
 const SEMESTER_KEYS = ["1-1", "1-2", "2-1", "2-2", "3-1", "3-2", "4-1", "4-2"];
 const GRADE_POINTS = { S: 10, A: 9, B: 8, C: 7, D: 6, E: 5, F: 0, Ab: 0 };
-const REGULATION_OPTIONS = ["R23", "R20", "R19", "R16"];
+const REGULATION_OPTIONS = ["R23", "R20"];
 
 const defaultState = {
   profile: {
@@ -30,8 +29,7 @@ const defaultState = {
     phone: "",
     collegeName: "",
     gender: "",
-    dob: "",
-    avatar: "https://api.dicebear.com/8.x/thumbs/svg?seed=Student"
+    dob: ""
   },
   semesters: {},
   instantCalculator: {
@@ -48,13 +46,12 @@ const defaultState = {
 let trendChart = null;
 let currentUser = null;
 let currentState = structuredClone(defaultState);
-let pendingProfilePhotoFile = null;
 let profilePanel = null;
 let sharedActionsReady = false;
 let profilePanelRefreshKey = 0;
 let profileStatusMessage = "Profile synced with your account.";
 let syllabusControlsReady = false;
-
+let syllabusLoadArmed = false;
 document.addEventListener("DOMContentLoaded", () => {
   initTheme();
   initProfilePanel();
@@ -141,8 +138,23 @@ function toggleTheme() {
   localStorage.setItem(THEME_KEY, next);
 }
 
+function getAvatarLetter(name) {
+  const trimmedName = String(name || "").trim();
+  return trimmedName ? trimmedName.charAt(0).toUpperCase() : "S";
+}
+
+function normalizeRegulation(regulation, fallback = "R23") {
+  const candidate = String(regulation || "").trim().toUpperCase();
+  if (REGULATION_OPTIONS.includes(candidate)) return candidate;
+  return REGULATION_OPTIONS.includes(fallback) ? fallback : "R23";
+}
+
+function getCurrentRegulation() {
+  return normalizeRegulation(currentState.profile.regulation, "R23");
+}
+
 function hydrateProfile(state) {
-  const { name, hallTicket, branch, regulation, avatar } = state.profile;
+  const { name, hallTicket, branch, regulation } = state.profile;
   setText("sidebarName", name);
   setText("sidebarRegulation", regulation);
   setText("sidebarDepartment", branch);
@@ -155,8 +167,11 @@ function hydrateProfile(state) {
   setText("heroRegulation", regulation);
 
   ["sidebarAvatar", "headerAvatar"].forEach(id => {
-    const image = document.getElementById(id);
-    if (image) image.src = avatar;
+    const avatarNode = document.getElementById(id);
+    if (avatarNode) {
+      avatarNode.textContent = getAvatarLetter(name);
+      avatarNode.setAttribute("aria-label", `${name || "Student"} avatar`);
+    }
   });
 }
 
@@ -228,7 +243,7 @@ function initSharedActions() {
     currentState.instantCalculator = {
       branch: currentState.instantCalculator.branch || normalizeBranchCode(currentState.profile.branch) || "CSE",
       semester: currentState.instantCalculator.semester || "1-1",
-      regulation: currentState.profile.regulation || "R23",
+      regulation: getCurrentRegulation(),
       rows: [createEmptyInstantRow()]
     };
     renderInstantCalculator();
@@ -244,13 +259,6 @@ function initSharedActions() {
 
   instantSemesterSelect?.addEventListener("change", async event => {
     currentState.instantCalculator.semester = event.target.value;
-    syncInstantSyllabusStatus();
-    updateInstantSummary(currentState.instantCalculator);
-    await persistInstantCalculator();
-  });
-
-  instantRegulationSelect?.addEventListener("change", async event => {
-    currentState.instantCalculator.regulation = event.target.value;
     syncInstantSyllabusStatus();
     updateInstantSummary(currentState.instantCalculator);
     await persistInstantCalculator();
@@ -466,6 +474,7 @@ function renderSemesterPage(state) {
 
   host.innerHTML = SEMESTER_KEYS.map(key => {
     const semester = state.semesters[key] || emptySemester();
+
     return `
       <article class="semester-card glass-panel${semester.isOpen ? " is-open" : ""}" data-semester="${key}">
         <button class="semester-card__toggle" type="button" data-toggle-semester="${key}">
@@ -564,6 +573,7 @@ function toggleSemesterCard(key) {
   if (shouldOpen) card.classList.add("is-open");
   if (!currentState.semesters[key]) currentState.semesters[key] = emptySemester();
   currentState.semesters[key].isOpen = shouldOpen;
+  syncSelectedSemester(key, shouldOpen);
 }
 
 async function saveSemester(key) {
@@ -936,36 +946,38 @@ function buildResultExportFilename(data, extension) {
 async function saveProfileChanges(draft) {
   if (!currentUser) return;
 
+  const normalizedRegulation = getCurrentRegulation();
   const updatedProfile = {
     ...currentState.profile,
     name: draft.fullName?.trim() || currentState.profile.name,
     email: currentUser.email || currentState.profile.email || "",
     hallTicket: draft.hallTicket || currentState.profile.hallTicket,
     branch: draft.branch?.trim() || "",
-    regulation: draft.regulation?.trim() || "",
+    regulation: normalizedRegulation,
     joiningYear: draft.joiningYear?.trim() || "",
     phone: draft.phone?.trim() || "",
     collegeName: draft.collegeName?.trim() || "",
     gender: draft.gender || "",
-    dob: draft.dob || "",
-    avatar: currentState.profile.avatar || ""
+    dob: draft.dob || ""
   };
 
   try {
-    if (pendingProfilePhotoFile) {
-      updatedProfile.avatar = await uploadProfileImage(currentUser.uid, pendingProfilePhotoFile);
-      pendingProfilePhotoFile = null;
-    }
-
     await backfillProfile(updatedProfile);
 
     await updateUserProfile({
-      displayName: updatedProfile.name,
-      ...(updatedProfile.avatar ? { photoURL: updatedProfile.avatar } : {})
+      displayName: updatedProfile.name
     });
 
     currentState.profile = updatedProfile;
+    currentState.instantCalculator.regulation = normalizedRegulation;
     hydrateProfile(currentState);
+    if (document.body.dataset.page === "instant-calculator") {
+      renderInstantCalculator();
+    }
+    if (document.body.dataset.page === "semesters") {
+      initSyllabusControls();
+      syncSyllabusStatus();
+    }
     profileStatusMessage = "Profile updated successfully.";
     return updatedProfile;
   } catch (error) {
@@ -999,8 +1011,11 @@ function renderInstantCalculator() {
   }
 
   if (regulationSelect) {
-    regulationSelect.innerHTML = REGULATION_OPTIONS.map(option => `<option value="${option}">${option}</option>`).join("");
-    regulationSelect.value = currentState.instantCalculator.regulation;
+    const regulation = getCurrentRegulation();
+    regulationSelect.innerHTML = `<option value="${regulation}">${regulation}</option>`;
+    regulationSelect.value = regulation;
+    regulationSelect.disabled = true;
+    currentState.instantCalculator.regulation = regulation;
   }
 
   syncInstantSyllabusStatus();
@@ -1160,11 +1175,12 @@ function emptySemester() {
 }
 
 function normalizeInstantCalculatorSettings(settings, fallbackRegulation = "R23") {
+  const regulation = normalizeRegulation(fallbackRegulation, "R23");
   if (Array.isArray(settings)) {
     return {
       branch: "CSE",
       semester: "1-1",
-      regulation: fallbackRegulation || "R23",
+      regulation,
       rows: settings.length
         ? settings.map(row => ({
           name: row?.name || "",
@@ -1178,7 +1194,7 @@ function normalizeInstantCalculatorSettings(settings, fallbackRegulation = "R23"
   return {
     branch: settings?.branch || "CSE",
     semester: settings?.semester || "1-1",
-    regulation: settings?.regulation || fallbackRegulation || "R23",
+    regulation,
     rows: Array.isArray(settings?.rows) && settings.rows.length
       ? settings.rows.map(row => ({
         name: row?.name || "",
@@ -1193,13 +1209,13 @@ function syncInstantSyllabusStatus() {
   const statusNode = document.getElementById("instantSyllabusStatus");
   if (!statusNode) return;
 
-  const regulation = document.getElementById("instantRegulationSelect")?.value || currentState.instantCalculator.regulation || "R23";
+  const regulation = getCurrentRegulation();
   const branch = document.getElementById("instantBranchSelect")?.value || currentState.instantCalculator.branch || "";
   const semester = document.getElementById("instantSemesterSelect")?.value || currentState.instantCalculator.semester || "";
   const subjects = CURRICULUM[regulation]?.[branch]?.[semester];
 
   if (!branch || !semester) {
-    statusNode.textContent = "Choose branch, regulation, and semester to load the official subject list into this calculator.";
+    statusNode.textContent = `Choose branch and semester to load subjects for your ${regulation} regulation.`;
     return;
   }
 
@@ -1216,7 +1232,7 @@ function applyInstantSyllabus() {
   const statusNode = document.getElementById("instantSyllabusStatus");
   const branch = document.getElementById("instantBranchSelect")?.value || currentState.instantCalculator.branch || "";
   const semester = document.getElementById("instantSemesterSelect")?.value || currentState.instantCalculator.semester || "";
-  const regulation = document.getElementById("instantRegulationSelect")?.value || currentState.instantCalculator.regulation || "R23";
+  const regulation = getCurrentRegulation();
   const subjects = CURRICULUM[regulation]?.[branch]?.[semester];
 
   if (!subjects?.length) {
@@ -1248,35 +1264,42 @@ function initSyllabusControls() {
   if (!regulationSelect || !branchSelect || !semesterSelect || !applyButton) return;
 
   if (!syllabusControlsReady) {
-    regulationSelect.addEventListener("change", syncSyllabusStatus);
     branchSelect.addEventListener("change", syncSyllabusStatus);
-    semesterSelect.addEventListener("change", syncSyllabusStatus);
+    semesterSelect.addEventListener("change", () => {
+      syllabusLoadArmed = Boolean(semesterSelect.value);
+      syncSyllabusStatus();
+    });
     applyButton.addEventListener("click", applySelectedSyllabus);
     syllabusControlsReady = true;
   }
 
-  regulationSelect.innerHTML = REGULATION_OPTIONS.map(option => `<option value="${option}">${option}</option>`).join("");
+  const regulation = getCurrentRegulation();
+  regulationSelect.innerHTML = `<option value="${regulation}">${regulation}</option>`;
   branchSelect.innerHTML = BRANCH_OPTIONS.map(option => `<option value="${option.code}">${option.code} - ${option.label}</option>`).join("");
-  semesterSelect.innerHTML = SEMESTER_KEYS.map(key => `<option value="${key}">Semester ${key}</option>`).join("");
+  semesterSelect.innerHTML = [`<option value="">Select semester</option>`, ...SEMESTER_KEYS.map(key => `<option value="${key}">Semester ${key}</option>`)].join("");
 
-  regulationSelect.value = REGULATION_OPTIONS.includes(currentState.profile.regulation) ? currentState.profile.regulation : "R23";
+  regulationSelect.value = regulation;
+  regulationSelect.disabled = true;
   branchSelect.value = BRANCH_OPTIONS.some(option => option.code === normalizeBranchCode(currentState.profile.branch))
     ? normalizeBranchCode(currentState.profile.branch)
     : "CSE";
-  semesterSelect.value = getOpenSemesterKey() || "1-1";
+  semesterSelect.value = getOpenSemesterKey() || "";
+  syllabusLoadArmed = false;
+  syncLoadSubjectsButton(Boolean(semesterSelect.value) && syllabusLoadArmed);
   syncSyllabusStatus();
 }
 
 function syncSyllabusStatus() {
-  const regulation = document.getElementById("syllabusRegulationSelect")?.value || "R23";
+  const regulation = getCurrentRegulation();
   const branch = document.getElementById("syllabusBranchSelect")?.value || "";
   const semester = document.getElementById("syllabusSemesterSelect")?.value || "";
   const statusNode = document.getElementById("syllabusStatus");
   if (!statusNode) return;
+  syncLoadSubjectsButton(Boolean(semester) && syllabusLoadArmed);
 
   const subjects = CURRICULUM[regulation]?.[branch]?.[semester];
   if (!branch || !semester) {
-    statusNode.textContent = "Select regulation, branch, and semester to load official subjects.";
+    statusNode.textContent = "Select or click a semester card to enable subject loading.";
     return;
   }
 
@@ -1290,7 +1313,7 @@ function syncSyllabusStatus() {
 }
 
 function applySelectedSyllabus() {
-  const regulation = document.getElementById("syllabusRegulationSelect")?.value || "R23";
+  const regulation = getCurrentRegulation();
   const branch = document.getElementById("syllabusBranchSelect")?.value || "";
   const semester = document.getElementById("syllabusSemesterSelect")?.value || "";
   const statusNode = document.getElementById("syllabusStatus");
@@ -1318,8 +1341,25 @@ function applySelectedSyllabus() {
     currentState.semesters[key].isOpen = key === semester;
   });
 
+  syllabusLoadArmed = false;
   renderSemesterPage(currentState);
   if (statusNode) statusNode.textContent = `Loaded ${subjects.length} official subjects into Semester ${semester} for ${branch}. Review grades and click Save Semester when you're ready.`;
+}
+
+function syncSelectedSemester(key, isSelected) {
+  const semesterSelect = document.getElementById("syllabusSemesterSelect");
+  if (!semesterSelect) return;
+  semesterSelect.value = isSelected ? key : "";
+  syllabusLoadArmed = Boolean(semesterSelect.value);
+  syncSyllabusStatus();
+}
+
+function syncLoadSubjectsButton(isVisible) {
+  const applyButton = document.getElementById("applySyllabusBtn");
+  if (!applyButton) return;
+  applyButton.classList.toggle("syllabus-action--hidden", !isVisible);
+  applyButton.setAttribute("aria-hidden", String(!isVisible));
+  applyButton.disabled = !isVisible;
 }
 
 function getOpenSemesterKey() {
@@ -1384,26 +1424,25 @@ function hasIncompleteProfile(profile, user) {
   return !profile?.name
     || !(profile?.hallTicket || profile?.roll)
     || !profile?.branch
-    || !profile?.regulation
-    || !profile?.email
-    || (!profile?.photoURL && !profile?.avatar && !user?.photoURL);
+    || !REGULATION_OPTIONS.includes(String(profile?.regulation || "").trim().toUpperCase())
+    || !profile?.email;
 }
 
 function normalizeProfileData(profile, user, baseProfile = defaultState.profile) {
   const fallbackName = user.displayName || user.email?.split("@")[0] || "Student";
+  const regulation = normalizeRegulation(profile?.regulation, baseProfile.regulation || "R23");
   return {
     ...baseProfile,
     name: profile?.name || fallbackName,
     hallTicket: profile?.hallTicket || profile?.roll || "Not set",
     branch: profile?.branch || "Department",
-    regulation: profile?.regulation || "R23",
+    regulation,
     email: profile?.email || user.email || "",
     joiningYear: profile?.joiningYear ? String(profile.joiningYear) : "",
     phone: profile?.phone || "",
     collegeName: profile?.collegeName || "",
     gender: profile?.gender || "",
-    dob: profile?.dob || "",
-    avatar: profile?.photoURL || profile?.avatar || user.photoURL || `https://api.dicebear.com/8.x/thumbs/svg?seed=${encodeURIComponent(user.email || fallbackName)}`
+    dob: profile?.dob || ""
   };
 }
 
@@ -1420,8 +1459,7 @@ async function backfillProfile(profile) {
     phone: profile.phone,
     collegeName: profile.collegeName,
     gender: profile.gender,
-    dob: profile.dob,
-    photoURL: profile.avatar
+    dob: profile.dob
   });
 }
 
@@ -1438,17 +1476,7 @@ function syncProfilePanel(summary = computeSummary(currentState)) {
     summary,
     statusMessage: profileStatusMessage,
     fetchProfile: refreshProfileState,
-    saveProfile: saveProfileChanges,
-    onPhotoSelect: file => {
-      pendingProfilePhotoFile = file || null;
-      profileStatusMessage = file
-        ? "Photo selected. Save changes to sync it."
-        : "Profile changes discarded.";
-    },
-    onCancelEdit: () => {
-      pendingProfilePhotoFile = null;
-      profileStatusMessage = "Profile changes discarded.";
-    }
+    saveProfile: saveProfileChanges
   });
 }
 
@@ -1464,6 +1492,7 @@ async function refreshProfileState() {
     }
 
     currentState.profile = normalizedProfile;
+    currentState.instantCalculator.regulation = normalizedProfile.regulation;
     hydrateProfile(currentState);
     profileStatusMessage = "Profile synced with your account.";
     return normalizedProfile;

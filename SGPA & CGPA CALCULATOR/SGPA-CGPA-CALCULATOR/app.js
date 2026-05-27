@@ -1,4 +1,4 @@
-import { auth, db, storage } from "./firebase-config.js";
+import { auth, db } from "./firebase-config.js";
 import {
   onAuthStateChanged, signOut,
   createUserWithEmailAndPassword,
@@ -9,9 +9,6 @@ import {
 import {
   collection, doc, setDoc, getDocs, deleteDoc, getDoc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-import {
-  ref, uploadBytes, getDownloadURL
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 
 // ── Grade points R23 ────────────────────────────────────────────
 export const GRADE_POINTS = { S:10, A:9, B:8, C:7, D:6, E:5, F:0, Ab:0 };
@@ -49,15 +46,13 @@ export function redirectIfLoggedIn() {
 
 export async function signUp(name, email, password, roll, branch, extraProfile = {}) {
   const c = await createUserWithEmailAndPassword(auth, email, password);
-  const photoURL = extraProfile.photoURL || "";
-  await updateProfile(c.user, { displayName: name, ...(photoURL ? { photoURL } : {}) });
+  await updateProfile(c.user, { displayName: name });
   await saveUserProfile(c.user.uid, {
     name,
     email,
     roll,
     branch,
     ...extraProfile,
-    ...(photoURL ? { photoURL } : {}),
     createdAt: new Date().toISOString()
   });
   return c.user;
@@ -90,28 +85,6 @@ export async function signIn(email, password) {
 export async function googleSignIn() {
   const c = await signInWithPopup(auth, new GoogleAuthProvider());
   return c.user;
-}
-
-export async function uploadProfileImage(uid, file) {
-  if (!file) return "";
-  const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
-  const imageRef = ref(storage, `profile-images/${uid}/${Date.now()}.${ext}`);
-  try {
-    await uploadBytes(imageRef, file, { contentType: file.type || "image/jpeg" });
-    return await getDownloadURL(imageRef);
-  } catch (error) {
-    const code = error?.code || "";
-    if (code.includes("storage/unauthorized")) {
-      throw new Error("Storage permission denied. Deploy the Storage rules and verify the signed-in user can write profile images.");
-    }
-    if (code.includes("storage/bucket-not-found")) {
-      throw new Error("Storage bucket not found. Check the Firebase storage bucket name in firebase-config.js.");
-    }
-    if (code.includes("storage/unknown")) {
-      throw new Error("Storage upload failed with an unknown error. Check Firebase Storage is enabled for this project.");
-    }
-    throw error;
-  }
 }
 
 export async function logout() {
