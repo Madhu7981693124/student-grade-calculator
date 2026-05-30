@@ -1,4 +1,4 @@
-import {
+﻿import {
   requireAuth,
   logout as firebaseLogout,
   getUserProfile,
@@ -197,6 +197,11 @@ function initSharedActions() {
   const downloadResultPdfBtn = document.getElementById("downloadResultPdfBtn");
   const printResultBtn = document.getElementById("printResultBtn");
   const shareResultBtn = document.getElementById("shareResultBtn");
+  const exportAllSemestersPdfBtn = document.getElementById("exportAllSemestersPdfBtn");
+  const editSubjectModal = document.getElementById("editSubjectModal");
+  const closeEditSubjectModalBtn = document.getElementById("closeEditSubjectModalBtn");
+  const cancelEditSubjectBtn = document.getElementById("cancelEditSubjectBtn");
+  const saveEditSubjectBtn = document.getElementById("saveEditSubjectBtn");
 
   openProfileButtons.forEach(button => button.addEventListener("click", async () => {
     profileModal?.classList.add("is-open");
@@ -217,6 +222,43 @@ function initSharedActions() {
     modal?.addEventListener("click", event => {
       if (event.target === modal) modal.classList.remove("is-open");
     });
+  });
+
+  [editSubjectModal].forEach(modal => {
+    modal?.addEventListener("click", event => {
+      if (event.target === modal) modal.classList.remove("is-open");
+    });
+  });
+
+  closeEditSubjectModalBtn?.addEventListener("click", () => editSubjectModal?.classList.remove("is-open"));
+  cancelEditSubjectBtn?.addEventListener("click", () => editSubjectModal?.classList.remove("is-open"));
+
+  saveEditSubjectBtn?.addEventListener("click", async () => {
+    const semKey = document.getElementById("editSubjectSemKey")?.value;
+    const index = Number(document.getElementById("editSubjectIndex")?.value);
+    const name = document.getElementById("editSubjectName")?.value.trim();
+    const credits = parseFloat(document.getElementById("editSubjectCredits")?.value);
+    const grade = document.getElementById("editSubjectGrade")?.value;
+
+    if (!semKey || !name || !Number.isFinite(credits) || credits < 0 || !grade) return;
+
+    const list = document.getElementById(`subjects-${semKey}`);
+    if (list) {
+      const rows = list.querySelectorAll(".subject-row");
+      const row = rows[index];
+      if (row) {
+        const [nameInput, creditInput, gradeSelect] = row.querySelectorAll("input, select");
+        if (nameInput) nameInput.value = name;
+        if (creditInput) creditInput.value = credits;
+        if (gradeSelect) gradeSelect.value = grade;
+      }
+    }
+
+    editSubjectModal?.classList.remove("is-open");
+  });
+
+  exportAllSemestersPdfBtn?.addEventListener("click", async () => {
+    await exportAllSemestersPdf();
   });
 
   addInstantRowBtn?.addEventListener("click", async () => {
@@ -343,6 +385,7 @@ function initSharedActions() {
     if (event.key === "Escape") {
       profileModal?.classList.remove("is-open");
       resultExportModal?.classList.remove("is-open");
+      editSubjectModal?.classList.remove("is-open");
     }
   });
 
@@ -496,7 +539,7 @@ function renderSemesterPage(state) {
 
         <div class="semester-card__body">
           <div class="subject-list" id="subjects-${key}">
-            ${renderSubjectRows(semester.subjects)}
+            ${renderSubjectRows(semester.subjects, key)}
           </div>
           <p class="helper-text">Add subjects, select grades, enter credits, and save for instant dashboard updates.</p>
           <div class="semester-card__actions">
@@ -523,21 +566,27 @@ function renderSemesterPage(state) {
   host.querySelectorAll("[data-save-semester]").forEach(button => {
     button.addEventListener("click", () => saveSemester(button.dataset.saveSemester));
   });
+  host.querySelectorAll("[data-edit-subject]").forEach(button => {
+    button.addEventListener("click", () => openEditSubjectModal(button.dataset.editSubject, Number(button.dataset.editIndex)));
+  });
 }
 
 function updateProfileSummaryStats(summary) {
   syncProfilePanel(summary);
 }
 
-function renderSubjectRows(subjects) {
+function renderSubjectRows(subjects, semKey) {
   const rows = subjects.length ? subjects : [{ name: "", credits: "", grade: "" }];
-  return rows.map(subject => `
-    <div class="subject-row">
+  return rows.map((subject, index) => `
+    <div class="subject-row" data-subject-index="${index}">
       <input type="text" placeholder="Subject name" value="${escapeHtml(subject.name || "")}" />
       <input type="number" min="0" step="0.5" placeholder="Credits" value="${escapeHtml(String(subject.credits || ""))}" />
       <select>
         ${["", "S", "A", "B", "C", "D", "E", "F", "Ab"].map(grade => `<option value="${grade}"${subject.grade === grade ? " selected" : ""}>${grade || "Grade"}</option>`).join("")}
       </select>
+      ${semKey ? `<button class="subject-edit-btn" type="button" data-edit-subject="${semKey}" data-edit-index="${index}" title="Edit subject" aria-label="Edit ${escapeHtml(subject.name || "subject")}">
+        <i class="fa-solid fa-pen-to-square"></i>
+      </button>` : ""}
     </div>
   `).join("");
 }
@@ -545,8 +594,10 @@ function renderSubjectRows(subjects) {
 function addSemesterRow(key) {
   const list = document.getElementById(`subjects-${key}`);
   if (!list) return;
+  const index = list.querySelectorAll(".subject-row").length;
   const row = document.createElement("div");
   row.className = "subject-row";
+  row.dataset.subjectIndex = String(index);
   row.innerHTML = `
     <input type="text" placeholder="Subject name" />
     <input type="number" min="0" step="0.5" placeholder="Credits" />
@@ -561,8 +612,18 @@ function addSemesterRow(key) {
       <option value="F">F</option>
       <option value="Ab">Ab</option>
     </select>
+    <button class="subject-edit-btn" type="button" title="Edit subject" aria-label="Edit subject">
+      <i class="fa-solid fa-pen-to-square"></i>
+    </button>
   `;
   list.appendChild(row);
+
+  // Wire up the edit button for the new row
+  const editBtn = row.querySelector(".subject-edit-btn");
+  editBtn?.addEventListener("click", () => {
+    const currentIndex = Array.from(list.querySelectorAll(".subject-row")).indexOf(row);
+    openEditSubjectModal(key, currentIndex);
+  });
 }
 
 function toggleSemesterCard(key) {
@@ -792,157 +853,325 @@ function setResultExportStatus(message, isError = false) {
   node.classList.toggle("is-error", Boolean(isError));
 }
 
+// ── PDF Export Utilities ────────────────────────────────────────
+// Safe text helper — replaces characters jsPDF helvetica cannot render
+function pdfSafeText(str) {
+  return String(str ?? "")
+    .replace(/[\u2014\u2013]/g, "-")
+    .replace(/\u2026/g, "...")
+    .replace(/[^\x00-\x7F]/g, "?");
+}
+
+function pdfTruncate(str, maxChars) {
+  const s = pdfSafeText(str);
+  return s.length > maxChars ? s.substring(0, maxChars - 1) + "." : s;
+}
+
+function getJsPdfCtor() {
+  const ctor = window.jspdf?.jsPDF || window.jsPDF;
+  if (!ctor) throw new Error("jsPDF library is not loaded. Please refresh the page.");
+  return ctor;
+}
+
+function buildSingleSemesterPdf(data) {
+  const JsPdfCtor = getJsPdfCtor();
+  const pdf = new JsPdfCtor({ orientation: "portrait", unit: "mm", format: "a4" });
+  const pageW = pdf.internal.pageSize.getWidth();
+  const pageH = pdf.internal.pageSize.getHeight();
+  const margin = 14;
+  const contentW = pageW - margin * 2;
+  let y = margin;
+
+  function checkPage(needed) {
+    if (y + (needed || 10) > pageH - margin) {
+      pdf.addPage();
+      y = margin;
+      drawBorder();
+    }
+  }
+
+  function drawBorder() {
+    pdf.setDrawColor(30, 64, 175);
+    pdf.setLineWidth(0.5);
+    pdf.rect(8, 8, pageW - 16, pageH - 16);
+  }
+
+  function t(str, x, yy, opts) {
+    pdf.text(pdfSafeText(str), x, yy, opts || {});
+  }
+
+  drawBorder();
+
+  // Blue header band
+  pdf.setFillColor(30, 64, 175);
+  pdf.rect(8, 8, pageW - 16, 34, "F");
+
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(14);
+  pdf.setTextColor(255, 255, 255);
+  t(data.collegeName || "JNTUGV Affiliated College", pageW / 2, 21, { align: "center" });
+
+  pdf.setFont("helvetica", "normal");
+  pdf.setFontSize(8.5);
+  t("(Autonomous) | Approved by AICTE | Affiliated to JNTUGV", pageW / 2, 28, { align: "center" });
+
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(11);
+  t("MARKS MEMO", pageW / 2, 37, { align: "center" });
+
+  y = 48;
+
+  // Exam title bar
+  pdf.setFillColor(219, 234, 254);
+  pdf.setDrawColor(147, 197, 253);
+  pdf.setLineWidth(0.3);
+  pdf.rect(margin, y, contentW, 10, "FD");
+  pdf.setTextColor(30, 64, 175);
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(9);
+  t(data.examTitle || ("Semester " + data.semesterKey + " Examinations"), pageW / 2, y + 7, { align: "center" });
+  y += 14;
+
+  // Student details
+  var detailRows = [
+    ["Student Name", data.studentName || "Student", "Hall Ticket No.", data.hallTicket || "Not set"],
+    ["Branch", data.branch || "CSE", "Regulation", data.regulation || "R23"],
+    ["College", data.collegeName || "Not set", "Semester", "Semester " + data.semesterKey]
+  ];
+
+  detailRows.forEach(function(row) {
+    checkPage(14);
+    pdf.setFillColor(248, 250, 252);
+    pdf.setDrawColor(226, 232, 240);
+    pdf.setLineWidth(0.2);
+    pdf.rect(margin, y, contentW / 2, 12, "FD");
+    pdf.rect(margin + contentW / 2, y, contentW / 2, 12, "FD");
+    pdf.setTextColor(100, 116, 139);
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(7);
+    t(row[0].toUpperCase(), margin + 3, y + 4.5);
+    t(row[2].toUpperCase(), margin + contentW / 2 + 3, y + 4.5);
+    pdf.setTextColor(15, 23, 42);
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(9);
+    t(pdfTruncate(row[1], 32), margin + 3, y + 10);
+    t(pdfTruncate(row[3], 32), margin + contentW / 2 + 3, y + 10);
+    y += 12;
+  });
+
+  y += 6;
+  checkPage(20);
+
+  // Table columns
+  var cols = [
+    { label: "S.No",         w: 12 },
+    { label: "Subject Name", w: 72 },
+    { label: "Credits",      w: 18 },
+    { label: "Marks",        w: 24 },
+    { label: "Grade",        w: 18 },
+    { label: "GP",           w: 18 }
+  ];
+  var colX = [];
+  var cx = margin;
+  cols.forEach(function(c) { colX.push(cx); cx += c.w; });
+
+  // Table header
+  pdf.setFillColor(30, 64, 175);
+  pdf.rect(margin, y, contentW, 8, "F");
+  pdf.setTextColor(255, 255, 255);
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(7.5);
+  cols.forEach(function(c, i) { t(c.label, colX[i] + 2, y + 5.5); });
+  y += 8;
+
+  // Table rows
+  data.subjects.forEach(function(sub, idx) {
+    var rowH = 7;
+    checkPage(rowH + 2);
+    if (idx % 2 === 0) {
+      pdf.setFillColor(248, 250, 252);
+      pdf.rect(margin, y, contentW, rowH, "F");
+    }
+    pdf.setDrawColor(226, 232, 240);
+    pdf.setLineWidth(0.15);
+    pdf.rect(margin, y, contentW, rowH);
+
+    var isFail = sub.grade === "F" || sub.grade === "Ab";
+    var gp = GRADE_POINTS[sub.grade] != null ? GRADE_POINTS[sub.grade] : 0;
+    var rowData = [
+      String(sub.serialNumber),
+      pdfTruncate(sub.name || "", 38),
+      String(sub.credits != null ? sub.credits : ""),
+      gradeToMarks(sub.grade),
+      sub.grade || "",
+      String(gp)
+    ];
+
+    rowData.forEach(function(cell, i) {
+      if (i === 4 && isFail) {
+        pdf.setTextColor(220, 38, 38);
+        pdf.setFont("helvetica", "bold");
+      } else {
+        pdf.setTextColor(15, 23, 42);
+        pdf.setFont("helvetica", "normal");
+      }
+      pdf.setFontSize(7.5);
+      t(cell, colX[i] + 2, y + 5);
+    });
+    y += rowH;
+  });
+
+  // SGPA summary row
+  checkPage(10);
+  pdf.setFillColor(219, 234, 254);
+  pdf.setDrawColor(147, 197, 253);
+  pdf.setLineWidth(0.3);
+  pdf.rect(margin, y, contentW, 9, "FD");
+  pdf.setTextColor(30, 64, 175);
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(8.5);
+  t("SGPA: " + data.sgpa.toFixed(2) + "   |   Total Credits: " + data.totalCredits.toFixed(1) + "   |   Subjects Passed: " + data.passedSubjects + " / " + data.appearedSubjects, margin + 4, y + 6.2);
+  y += 13;
+
+  // Result row
+  checkPage(12);
+  var isPassed = data.passedSubjects === data.appearedSubjects;
+  var resultText = isPassed ? "PASS" : "PASS WITH BACKLOGS";
+  pdf.setFillColor(isPassed ? 220 : 254, isPassed ? 252 : 226, isPassed ? 231 : 226);
+  pdf.rect(margin, y, contentW, 9, "F");
+  pdf.setTextColor(isPassed ? 22 : 153, isPassed ? 163 : 27, isPassed ? 74 : 27);
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(9);
+  t("Result: " + resultText, margin + 4, y + 6.2);
+  y += 13;
+
+  // Footer
+  checkPage(28);
+  pdf.setDrawColor(147, 197, 253);
+  pdf.setLineWidth(0.3);
+  pdf.line(margin, y, pageW - margin, y);
+  y += 5;
+  pdf.setTextColor(100, 116, 139);
+  pdf.setFont("helvetica", "normal");
+  pdf.setFontSize(7.5);
+  var dateStr = new Date().toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric" });
+  t("Generated on: " + dateStr, margin, y);
+  t("Grade Studio - Academic Platform", pageW - margin, y, { align: "right" });
+  y += 8;
+
+  // Signature boxes
+  var sigW = 48;
+  var sigH = 14;
+  [
+    { label: "Student Signature", x: margin },
+    { label: "HOD Signature",     x: pageW / 2 - sigW / 2 },
+    { label: "Principal Signature", x: pageW - margin - sigW }
+  ].forEach(function(sig) {
+    pdf.setDrawColor(147, 197, 253);
+    pdf.setLineWidth(0.3);
+    pdf.rect(sig.x, y, sigW, sigH);
+    pdf.setTextColor(100, 116, 139);
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(7);
+    t(sig.label, sig.x + sigW / 2, y + sigH + 4, { align: "center" });
+  });
+
+  return pdf;
+}
+
 async function downloadResultSheetPdf(data) {
+  var btn = document.getElementById("downloadResultPdfBtn");
+  var originalHtml = btn ? btn.innerHTML : null;
   try {
-    const canvas = await renderResultSheetCanvas();
-    const pdf = buildPdfFromCanvas(canvas);
-    pdf.save(buildResultExportFilename(data, "pdf"));
-    setResultExportStatus(`PDF downloaded for Semester ${data.semesterKey}.`);
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generating...';
+    }
+    var pdf = buildSingleSemesterPdf(data);
+    var filename = buildResultExportFilename(data, "pdf");
+    pdf.save(filename);
+    setResultExportStatus("PDF downloaded: " + filename);
   } catch (error) {
     console.error("Result PDF export error:", error);
-    setResultExportStatus("Unable to generate the PDF right now. Please try again.", true);
+    setResultExportStatus("PDF generation failed: " + (error.message || "Unknown error"), true);
+  } finally {
+    if (btn && originalHtml) {
+      btn.disabled = false;
+      btn.innerHTML = originalHtml;
+    }
   }
 }
 
 async function shareResultSheet(data) {
   try {
-    const shareText = [
+    var shareText = [
       data.examTitle,
-      `Student: ${data.studentName}`,
-      `Hall Ticket: ${data.hallTicket}`,
-      `SGPA: ${data.sgpa.toFixed(2)}`,
-      `Credits: ${data.totalCredits.toFixed(1)}`,
-      `Passed: ${data.passedSubjects}/${data.appearedSubjects}`
+      "Student: " + data.studentName,
+      "Hall Ticket: " + data.hallTicket,
+      "SGPA: " + data.sgpa.toFixed(2),
+      "Credits: " + data.totalCredits.toFixed(1),
+      "Passed: " + data.passedSubjects + "/" + data.appearedSubjects
     ].join("\n");
 
-    const canvas = await renderResultSheetCanvas();
-    const pdf = buildPdfFromCanvas(canvas);
-    const blob = pdf.output("blob");
-    const file = new File([blob], buildResultExportFilename(data, "pdf"), { type: "application/pdf" });
+    var pdf = buildSingleSemesterPdf(data);
+    var blob = pdf.output("blob");
+    var filename = buildResultExportFilename(data, "pdf");
+    var file = new File([blob], filename, { type: "application/pdf" });
 
-    if (navigator.share && navigator.canShare?.({ files: [file] })) {
-      await navigator.share({
-        title: `Semester ${data.semesterKey} Result`,
-        text: shareText,
-        files: [file]
-      });
-      setResultExportStatus(`Result shared for Semester ${data.semesterKey}.`);
+    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ title: "Semester " + data.semesterKey + " Result", text: shareText, files: [file] });
+      setResultExportStatus("Result shared for Semester " + data.semesterKey + ".");
       return;
     }
-
     if (navigator.share) {
-      await navigator.share({
-        title: `Semester ${data.semesterKey} Result`,
-        text: shareText
-      });
-      setResultExportStatus(`Result shared for Semester ${data.semesterKey}.`);
+      await navigator.share({ title: "Semester " + data.semesterKey + " Result", text: shareText });
+      setResultExportStatus("Result shared for Semester " + data.semesterKey + ".");
       return;
     }
-
-    if (navigator.clipboard?.writeText) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
       await navigator.clipboard.writeText(shareText);
-      setResultExportStatus("Sharing is not supported on this device. Result details were copied to the clipboard instead.");
+      setResultExportStatus("Sharing not supported on this device. Result details copied to clipboard.");
       return;
     }
-
     setResultExportStatus("Sharing is not supported in this browser.", true);
   } catch (error) {
-    if (error?.name === "AbortError") {
-      setResultExportStatus("Share cancelled.");
-      return;
-    }
+    if (error && error.name === "AbortError") { setResultExportStatus("Share cancelled."); return; }
     console.error("Result share error:", error);
     setResultExportStatus("Unable to share the result sheet right now.", true);
   }
 }
 
 function printResultSheet(data) {
-  const preview = document.getElementById("resultSheetPreview");
-  if (!preview) return;
-
-  const printWindow = window.open("", "_blank", "noopener,noreferrer,width=960,height=1200");
-  if (!printWindow) {
-    setResultExportStatus("Pop-up was blocked. Please allow pop-ups to print the result sheet.", true);
-    return;
+  try {
+    var pdf = buildSingleSemesterPdf(data);
+    var blobUrl = URL.createObjectURL(pdf.output("blob"));
+    var printFrame = document.createElement("iframe");
+    printFrame.style.cssText = "position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;";
+    printFrame.src = blobUrl;
+    document.body.appendChild(printFrame);
+    printFrame.onload = function() {
+      try {
+        printFrame.contentWindow.focus();
+        printFrame.contentWindow.print();
+      } catch (e) {
+        window.open(blobUrl, "_blank");
+      }
+      setTimeout(function() {
+        if (document.body.contains(printFrame)) document.body.removeChild(printFrame);
+        URL.revokeObjectURL(blobUrl);
+      }, 3000);
+    };
+    setResultExportStatus("Print dialog opened for Semester " + data.semesterKey + ".");
+  } catch (error) {
+    console.error("Print error:", error);
+    setResultExportStatus("Print failed: " + (error.message || "Unknown error"), true);
   }
-
-  printWindow.document.write(`
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-      <meta charset="UTF-8" />
-      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-      <title>Semester ${escapeHtml(data.semesterKey)} Result</title>
-      <style>
-        body { margin: 0; padding: 24px; background: #eef2f7; font-family: "Times New Roman", Georgia, serif; }
-        .result-sheet { max-width: 794px; margin: 0 auto; background: #fff; color: #111827; border: 1px solid #d1d5db; padding: 28px; }
-        .result-sheet__header { text-align: center; border-bottom: 1px solid #d1d5db; padding-bottom: 18px; }
-        .result-sheet__header h2 { margin: 10px 0 0; font-size: 22px; line-height: 1.5; }
-        .result-sheet__brand { margin: 0; font-size: 12px; text-transform: uppercase; letter-spacing: 0.16em; color: #4b5563; }
-        .result-sheet__meta { display: flex; justify-content: center; gap: 18px; flex-wrap: wrap; margin-top: 12px; font-size: 14px; }
-        .result-sheet__details { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 22px 0; }
-        .result-detail { border: 1px solid #d1d5db; padding: 12px 14px; }
-        .result-detail span { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; color: #6b7280; margin-bottom: 6px; }
-        .result-detail strong { font-size: 15px; }
-        .result-sheet__table { width: 100%; border-collapse: collapse; font-size: 14px; }
-        .result-sheet__table th, .result-sheet__table td { border: 1px solid #d1d5db; padding: 10px; text-align: left; }
-        .result-sheet__table th { background: #f8fafc; }
-        .result-sheet__footer { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; border-top: 1px solid #d1d5db; padding-top: 18px; margin-top: 20px; font-size: 14px; }
-        @media print {
-          body { background: #fff; padding: 0; }
-          .result-sheet { border: none; margin: 0; max-width: none; }
-        }
-      </style>
-    </head>
-    <body>${preview.innerHTML}</body>
-    </html>
-  `);
-  printWindow.document.close();
-  printWindow.focus();
-  printWindow.print();
-  setResultExportStatus(`Print view opened for Semester ${data.semesterKey}.`);
-}
-
-async function renderResultSheetCanvas() {
-  const target = document.getElementById("resultSheetCard");
-  if (!target) throw new Error("Result sheet preview is not available.");
-  if (!window.html2canvas) throw new Error("html2canvas is unavailable.");
-
-  return window.html2canvas(target, {
-    scale: 2,
-    backgroundColor: "#ffffff",
-    useCORS: true
-  });
-}
-
-function buildPdfFromCanvas(canvas) {
-  const JsPdfCtor = window.jspdf?.jsPDF;
-  if (!JsPdfCtor) throw new Error("jsPDF is unavailable.");
-
-  const pdf = new JsPdfCtor({
-    orientation: "portrait",
-    unit: "mm",
-    format: "a4"
-  });
-  const pageWidth = pdf.internal.pageSize.getWidth();
-  const pageHeight = pdf.internal.pageSize.getHeight();
-  const margin = 10;
-  const usableWidth = pageWidth - (margin * 2);
-  const usableHeight = pageHeight - (margin * 2);
-  const imageWidth = usableWidth;
-  const imageHeight = (canvas.height * imageWidth) / canvas.width;
-  const finalHeight = Math.min(imageHeight, usableHeight);
-  const imageData = canvas.toDataURL("image/png");
-
-  pdf.addImage(imageData, "PNG", margin, margin, imageWidth, finalHeight, undefined, "FAST");
-  return pdf;
 }
 
 function buildResultExportFilename(data, extension) {
-  const safeHallTicket = String(data.hallTicket || "student").replace(/[^a-z0-9-_]/gi, "_");
-  return `semester-${data.semesterKey}-result-${safeHallTicket}.${extension}`;
+  var safeHallTicket = String(data.hallTicket || "student").replace(/[^a-z0-9_-]/gi, "_");
+  return "semester-" + data.semesterKey + "-result-" + safeHallTicket + "." + extension;
 }
-
 async function saveProfileChanges(draft) {
   if (!currentUser) return;
 
@@ -1514,4 +1743,397 @@ function escapeHtml(value) {
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;");
+}
+
+// ── Edit Subject Modal ──────────────────────────────────────────
+function openEditSubjectModal(semKey, index) {
+  const modal = document.getElementById("editSubjectModal");
+  if (!modal) return;
+
+  const list = document.getElementById(`subjects-${semKey}`);
+  let name = "", credits = "", grade = "";
+
+  if (list) {
+    const rows = list.querySelectorAll(".subject-row");
+    const row = rows[index];
+    if (row) {
+      const [nameInput, creditInput, gradeSelect] = row.querySelectorAll("input, select");
+      name = nameInput?.value || "";
+      credits = creditInput?.value || "";
+      grade = gradeSelect?.value || "";
+    }
+  } else if (currentState.semesters[semKey]?.subjects?.[index]) {
+    const subject = currentState.semesters[semKey].subjects[index];
+    name = subject.name || "";
+    credits = String(subject.credits || "");
+    grade = subject.grade || "";
+  }
+
+  const nameInput = document.getElementById("editSubjectName");
+  const creditsInput = document.getElementById("editSubjectCredits");
+  const gradeSelect = document.getElementById("editSubjectGrade");
+  const semKeyInput = document.getElementById("editSubjectSemKey");
+  const indexInput = document.getElementById("editSubjectIndex");
+
+  if (nameInput) nameInput.value = name;
+  if (creditsInput) creditsInput.value = credits;
+  if (gradeSelect) gradeSelect.value = grade;
+  if (semKeyInput) semKeyInput.value = semKey;
+  if (indexInput) indexInput.value = String(index);
+
+  const title = document.getElementById("editSubjectModalTitle");
+  if (title) title.innerHTML = `<i class="fa-solid fa-pen-to-square"></i> Edit Subject${name ? ` — ${escapeHtml(name)}` : ""}`;
+
+  modal.classList.add("is-open");
+  nameInput?.focus();
+}
+
+// ── Export All Semesters PDF ────────────────────────────────────
+async function exportAllSemestersPdf() {
+  const btn = document.getElementById("exportAllSemestersPdfBtn");
+  const label = document.getElementById("exportAllBtnLabel");
+
+  const savedSemesters = SEMESTER_KEYS
+    .filter(key => currentState.semesters[key]?.subjects?.length)
+    .map(key => ({ key, ...currentState.semesters[key] }));
+
+  if (!savedSemesters.length) {
+    alert("No semesters with saved grades found. Please save at least one semester before exporting.");
+    return;
+  }
+
+  // Show loading state
+  if (btn) {
+    btn.disabled = true;
+    btn.dataset.loading = "true";
+  }
+  if (label) label.textContent = "Generating PDF…";
+
+  try {
+    const JsPdfCtor = window.jspdf?.jsPDF;
+    if (!JsPdfCtor) throw new Error("jsPDF is unavailable. Please refresh the page.");
+
+    const profile = currentState.profile || {};
+    const summary = computeSummary(currentState);
+    const regulation = getCurrentRegulation();
+    const branch = document.getElementById("syllabusBranchSelect")?.value
+      || normalizeBranchCode(profile.branch)
+      || "CSE";
+
+    const pdf = new JsPdfCtor({ orientation: "portrait", unit: "mm", format: "a4" });
+    const pageW = pdf.internal.pageSize.getWidth();
+    const pageH = pdf.internal.pageSize.getHeight();
+    const margin = 14;
+    const contentW = pageW - margin * 2;
+    let y = margin;
+
+    // ── Helper functions ──────────────────────────────────────
+    function checkPage(needed = 10) {
+      if (y + needed > pageH - margin) {
+        pdf.addPage();
+        y = margin;
+        drawPageBorder();
+      }
+    }
+
+    function drawPageBorder() {
+      pdf.setDrawColor(30, 64, 175);
+      pdf.setLineWidth(0.6);
+      pdf.rect(8, 8, pageW - 16, pageH - 16);
+    }
+
+    function drawHRule(thickness = 0.3, color = [30, 64, 175]) {
+      pdf.setDrawColor(...color);
+      pdf.setLineWidth(thickness);
+      pdf.line(margin, y, pageW - margin, y);
+      y += 3;
+    }
+
+    function text(str, x, yPos, opts = {}) {
+      pdf.text(String(str ?? ""), x, yPos, opts);
+    }
+
+    // ── Page 1: Header ────────────────────────────────────────
+    drawPageBorder();
+
+    // Blue header band
+    pdf.setFillColor(30, 64, 175);
+    pdf.rect(8, 8, pageW - 16, 38, "F");
+
+    // College name
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(15);
+    pdf.setTextColor(255, 255, 255);
+    text(profile.collegeName || "JNTUGV Affiliated College", pageW / 2, 22, { align: "center" });
+
+    // Subtitle
+    pdf.setFontSize(9);
+    pdf.setFont("helvetica", "normal");
+    text("(Autonomous) | Approved by AICTE | Affiliated to JNTUGV", pageW / 2, 29, { align: "center" });
+
+    // MARKS MEMO title
+    pdf.setFontSize(13);
+    pdf.setFont("helvetica", "bold");
+    text("CONSOLIDATED MARKS MEMO", pageW / 2, 40, { align: "center" });
+
+    y = 52;
+
+    // Student info box
+    pdf.setFillColor(239, 246, 255);
+    pdf.setDrawColor(147, 197, 253);
+    pdf.setLineWidth(0.4);
+    pdf.roundedRect(margin, y, contentW, 38, 3, 3, "FD");
+
+    pdf.setTextColor(15, 23, 42);
+    pdf.setFontSize(9);
+    pdf.setFont("helvetica", "bold");
+
+    const col1x = margin + 5;
+    const col2x = margin + contentW / 2 + 5;
+    const labelColor = [71, 85, 105];
+    const valueColor = [15, 23, 42];
+
+    function infoRow(label, value, x, rowY) {
+      pdf.setTextColor(...labelColor);
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(7.5);
+      text(label.toUpperCase(), x, rowY);
+      pdf.setTextColor(...valueColor);
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(9);
+      text(value || "—", x, rowY + 5);
+    }
+
+    infoRow("Student Name", profile.name || "Student", col1x, y + 8);
+    infoRow("Hall Ticket Number", profile.hallTicket || "Not set", col2x, y + 8);
+    infoRow("Branch", profile.branch || branch, col1x, y + 22);
+    infoRow("Regulation", regulation, col2x, y + 22);
+
+    y += 44;
+
+    // Academic year row
+    pdf.setFillColor(219, 234, 254);
+    pdf.rect(margin, y, contentW, 8, "F");
+    pdf.setTextColor(30, 64, 175);
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(8);
+    const joiningYear = profile.joiningYear ? Number(profile.joiningYear) : null;
+    const academicYearStr = joiningYear
+      ? `Academic Year: ${joiningYear} – ${joiningYear + 4}`
+      : "Academic Year: —";
+    text(academicYearStr, pageW / 2, y + 5.5, { align: "center" });
+    y += 12;
+
+    // ── Semester sections ─────────────────────────────────────
+    for (const sem of savedSemesters) {
+      const subjects = sem.subjects || [];
+      const semTitle = `Semester ${sem.key}`;
+      const rowHeight = 7;
+      const tableHeaderH = 8;
+      const estimatedH = 14 + tableHeaderH + subjects.length * rowHeight + 14;
+
+      checkPage(estimatedH);
+
+      // Semester header bar
+      pdf.setFillColor(30, 64, 175);
+      pdf.rect(margin, y, contentW, 9, "F");
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(9.5);
+      text(semTitle, margin + 4, y + 6.2);
+      const semSgpaStr = `SGPA: ${sem.sgpa?.toFixed(2) ?? "—"}`;
+      text(semSgpaStr, pageW - margin - 4, y + 6.2, { align: "right" });
+      y += 11;
+
+      // Table header
+      const colWidths = [10, 70, 18, 22, 18, 18];
+      const colLabels = ["S.No", "Subject Name", "Credits", "Marks", "Grade", "GP"];
+      const colX = [margin];
+      for (let i = 0; i < colWidths.length - 1; i++) {
+        colX.push(colX[i] + colWidths[i]);
+      }
+
+      pdf.setFillColor(219, 234, 254);
+      pdf.rect(margin, y, contentW, tableHeaderH, "F");
+      pdf.setDrawColor(147, 197, 253);
+      pdf.setLineWidth(0.3);
+      pdf.rect(margin, y, contentW, tableHeaderH);
+
+      pdf.setTextColor(30, 64, 175);
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(7.5);
+      colLabels.forEach((label, i) => {
+        text(label, colX[i] + 2, y + 5.5);
+      });
+      y += tableHeaderH;
+
+      // Table rows
+      subjects.forEach((subject, idx) => {
+        checkPage(rowHeight + 2);
+        const isEven = idx % 2 === 0;
+        if (isEven) {
+          pdf.setFillColor(248, 250, 252);
+          pdf.rect(margin, y, contentW, rowHeight, "F");
+        }
+        pdf.setDrawColor(226, 232, 240);
+        pdf.setLineWidth(0.2);
+        pdf.rect(margin, y, contentW, rowHeight);
+
+        const gp = GRADE_POINTS[subject.grade] ?? 0;
+        const marks = gradeToMarks(subject.grade);
+        const rowData = [
+          String(idx + 1),
+          subject.name || "—",
+          String(subject.credits ?? "—"),
+          marks,
+          subject.grade || "—",
+          String(gp)
+        ];
+
+        pdf.setTextColor(15, 23, 42);
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(7.5);
+        rowData.forEach((cell, i) => {
+          const cellText = String(cell);
+          const maxW = colWidths[i] - 3;
+          const truncated = pdf.getStringUnitWidth(cellText) * 7.5 / pdf.internal.scaleFactor > maxW
+            ? cellText.substring(0, Math.floor(maxW / 2)) + "…"
+            : cellText;
+          text(truncated, colX[i] + 2, y + 5);
+        });
+
+        // Fail highlight
+        if (subject.grade === "F" || subject.grade === "Ab") {
+          pdf.setTextColor(220, 38, 38);
+          pdf.setFont("helvetica", "bold");
+          text(subject.grade || "—", colX[4] + 2, y + 5);
+          pdf.setTextColor(15, 23, 42);
+          pdf.setFont("helvetica", "normal");
+        }
+
+        y += rowHeight;
+      });
+
+      // SGPA row
+      pdf.setFillColor(239, 246, 255);
+      pdf.rect(margin, y, contentW, 8, "F");
+      pdf.setDrawColor(147, 197, 253);
+      pdf.rect(margin, y, contentW, 8);
+      pdf.setTextColor(30, 64, 175);
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(8);
+      text(`Semester ${sem.key} SGPA: ${sem.sgpa?.toFixed(2) ?? "—"}   |   Total Credits: ${sem.credits?.toFixed(1) ?? "—"}`, margin + 4, y + 5.5);
+      y += 12;
+    }
+
+    // ── Summary section ───────────────────────────────────────
+    checkPage(50);
+
+    pdf.setFillColor(30, 64, 175);
+    pdf.rect(margin, y, contentW, 9, "F");
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(10);
+    text("OVERALL ACADEMIC SUMMARY", pageW / 2, y + 6.2, { align: "center" });
+    y += 12;
+
+    const classAward = getClassAward(summary.cgpa);
+    const summaryRows = [
+      ["Overall CGPA", summary.cgpa.toFixed(2)],
+      ["Percentage", `${summary.percentage.toFixed(1)}%`],
+      ["Total Credits Earned", String(summary.totalCredits)],
+      ["Semesters Completed", String(summary.completedSemesters)],
+      ["Total Backlogs", String(summary.backlogs)],
+      ["Class Awarded", classAward]
+    ];
+
+    const sumColW = contentW / 2;
+    summaryRows.forEach(([label, value], idx) => {
+      checkPage(10);
+      const isEven = idx % 2 === 0;
+      if (isEven) {
+        pdf.setFillColor(239, 246, 255);
+      } else {
+        pdf.setFillColor(248, 250, 252);
+      }
+      pdf.rect(margin, y, contentW, 9, "F");
+      pdf.setDrawColor(147, 197, 253);
+      pdf.setLineWidth(0.2);
+      pdf.rect(margin, y, contentW, 9);
+
+      pdf.setTextColor(71, 85, 105);
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(8);
+      text(label, margin + 4, y + 6);
+
+      pdf.setTextColor(label === "Class Awarded" ? 30 : 15, label === "Class Awarded" ? 64 : 23, label === "Class Awarded" ? 175 : 42);
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(9);
+      text(value, pageW - margin - 4, y + 6, { align: "right" });
+      y += 9;
+    });
+
+    y += 8;
+
+    // ── Footer / Signature ────────────────────────────────────
+    checkPage(30);
+
+    drawHRule(0.4, [147, 197, 253]);
+
+    pdf.setTextColor(100, 116, 139);
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(7.5);
+    const dateStr = new Date().toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric" });
+    text(`Generated on: ${dateStr}`, margin, y);
+    text("Grade Studio — Academic Platform", pageW - margin, y, { align: "right" });
+    y += 8;
+
+    // Signature boxes
+    const sigBoxW = 50;
+    const sigBoxH = 14;
+    const sigPositions = [
+      { label: "Student Signature", x: margin },
+      { label: "HOD Signature", x: pageW / 2 - sigBoxW / 2 },
+      { label: "Principal Signature", x: pageW - margin - sigBoxW }
+    ];
+
+    sigPositions.forEach(({ label, x }) => {
+      pdf.setDrawColor(147, 197, 253);
+      pdf.setLineWidth(0.3);
+      pdf.rect(x, y, sigBoxW, sigBoxH);
+      pdf.setTextColor(100, 116, 139);
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(7);
+      text(label, x + sigBoxW / 2, y + sigBoxH + 4, { align: "center" });
+    });
+
+    // Save
+    const safeHallTicket = String(profile.hallTicket || "student").replace(/[^a-z0-9\-_]/gi, "_");
+    pdf.save(`consolidated-marks-memo-${safeHallTicket}.pdf`);
+
+  } catch (error) {
+    console.error("Export all semesters PDF error:", error);
+    alert(`Unable to generate PDF: ${error.message || "Unknown error"}. Please try again.`);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      delete btn.dataset.loading;
+    }
+    if (label) label.textContent = "Export All Semesters PDF";
+  }
+}
+
+function gradeToMarks(grade) {
+  const map = { S: "91-100", A: "81-90", B: "71-80", C: "61-70", D: "51-60", E: "41-50", F: "< 40", Ab: "Absent" };
+  return map[grade] || "—";
+}
+
+function getClassAward(cgpa) {
+  const v = parseFloat(cgpa);
+  if (Number.isNaN(v)) return "—";
+  if (v >= 7.5) return "First Class with Distinction";
+  if (v >= 6.5) return "First Class";
+  if (v >= 5.5) return "Second Class";
+  if (v >= 5.0) return "Pass Class";
+  return "Not Eligible";
 }
