@@ -32,14 +32,18 @@ export function toPercent(sgpa) {
 
 // ── Auth helpers ────────────────────────────────────────────────
 export function requireAuth(cb) {
-  onAuthStateChanged(auth, user => {
+  // Unsubscribe after the first event to avoid double-redirects
+  // (e.g. when logout() has already navigated away)
+  const unsub = onAuthStateChanged(auth, user => {
+    unsub();
     if (!user) { window.location.href = "index.html"; return; }
     cb(user);
   });
 }
 
 export function redirectIfLoggedIn() {
-  onAuthStateChanged(auth, user => {
+  const unsub = onAuthStateChanged(auth, user => {
+    unsub();
     if (user) window.location.href = "dashboard.html";
   });
 }
@@ -89,7 +93,8 @@ export async function googleSignIn() {
 
 export async function logout() {
   await signOut(auth);
-  window.location.href = "index.html";
+  // Use ?signedout=1 so index.html knows not to auto-redirect back to dashboard
+  window.location.href = "index.html?signedout=1";
 }
 
 export function friendlyError(code) {

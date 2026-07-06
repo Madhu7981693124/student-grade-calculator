@@ -50,3 +50,49 @@ export const CURRICULUM = {
     }
   }
 };
+
+// Branch options used by syllabus selects and instant calculator
+export const BRANCH_OPTIONS = [
+  { code: "CSE",   label: "Computer Science and Engineering" },
+  { code: "CSM",   label: "CSE (AI & ML)" },
+  { code: "CSD",   label: "CSE (Data Science)" },
+  { code: "CSG",   label: "CSE (Cyber Security)" },
+  { code: "CSI",   label: "CSE (IoT)" },
+  { code: "IT",    label: "Information Technology" },
+  { code: "ECE",   label: "Electronics and Communication Engineering" },
+  { code: "EEE",   label: "Electrical and Electronics Engineering" },
+  { code: "MECH",  label: "Mechanical Engineering" },
+  { code: "CIVIL", label: "Civil Engineering" },
+  { code: "AIDS",  label: "Artificial Intelligence and Data Science" },
+  { code: "AIM",   label: "Artificial Intelligence and Machine Learning" },
+];
+
+// Maps a full branch name (from user profile) to its short code
+const _branchNameToCode = {
+  "computer science and engineering": "CSE",
+  "cse (ai & ml)": "CSM",
+  "computer science and engineering (ai & ml)": "CSM",
+  "cse (data science)": "CSD",
+  "computer science and engineering (data science)": "CSD",
+  "cse (cyber security)": "CSG",
+  "computer science and engineering (cyber security)": "CSG",
+  "cse (iot)": "CSI",
+  "computer science and engineering (iot)": "CSI",
+  "information technology": "IT",
+  "electronics and communication engineering": "ECE",
+  "electrical and electronics engineering": "EEE",
+  "mechanical engineering": "MECH",
+  "civil engineering": "CIVIL",
+  "artificial intelligence and data science": "AIDS",
+  "artificial intelligence and machine learning": "AIM",
+};
+
+export function normalizeBranchCode(branchName) {
+  if (!branchName) return "CSE";
+  const key = String(branchName).trim().toLowerCase();
+  // If it's already a short code (e.g. "CSE"), return it directly
+  if (BRANCH_OPTIONS.some(opt => opt.code === branchName.toUpperCase())) {
+    return branchName.toUpperCase();
+  }
+  return _branchNameToCode[key] || "CSE";
+}

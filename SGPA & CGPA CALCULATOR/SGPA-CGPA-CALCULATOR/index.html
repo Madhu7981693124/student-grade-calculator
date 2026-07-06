@@ -582,8 +582,21 @@
       authFlowInProgress: false
     };
 
+    // If the user just logged out (?signedout=1), skip the FIRST auth state event
+    // (Firebase may still emit the old cached token briefly).
+    // Use a let so we can clear the flag after the first event fires,
+    // allowing all subsequent auth changes (e.g. a new login) to redirect normally.
+    let skipNextAuthEvent = new URLSearchParams(window.location.search).has("signedout");
+    if (skipNextAuthEvent) {
+      history.replaceState(null, "", window.location.pathname);
+    }
+
     onAuthStateChanged(auth, user => {
       if (state.authFlowInProgress) return;
+      if (skipNextAuthEvent) {
+        skipNextAuthEvent = false; // only skip once — the very first stale event
+        return;
+      }
       if (user && user.email) {
         window.location.href = "dashboard.html";
       }
