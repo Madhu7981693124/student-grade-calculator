@@ -339,36 +339,13 @@
             </div>
             <datalist id="branchOptions">
               <option value="Computer Science and Engineering"></option>
-              <option value="Computer Science and Engineering (AI & ML)"></option>
+              <option value="Computer Science and Engineering (AI &amp; ML)"></option>
+              <option value="Computer Science and Engineering (Machine Learning)"></option>
               <option value="Computer Science and Engineering (Data Science)"></option>
-              <option value="Computer Science and Engineering (Cyber Security)"></option>
-              <option value="Computer Science and Engineering (IoT)"></option>
-              <option value="Artificial Intelligence and Machine Learning"></option>
-              <option value="Artificial Intelligence and Data Science"></option>
-              <option value="Information Technology"></option>
               <option value="Electronics and Communication Engineering"></option>
               <option value="Electrical and Electronics Engineering"></option>
-              <option value="Electronics and Instrumentation Engineering"></option>
               <option value="Mechanical Engineering"></option>
               <option value="Civil Engineering"></option>
-              <option value="Chemical Engineering"></option>
-              <option value="Biotechnology"></option>
-              <option value="Biomedical Engineering"></option>
-              <option value="Agricultural Engineering"></option>
-              <option value="Aeronautical Engineering"></option>
-              <option value="Automobile Engineering"></option>
-              <option value="Mining Engineering"></option>
-              <option value="Petroleum Engineering"></option>
-              <option value="Robotics and Automation"></option>
-              <option value="Mechatronics Engineering"></option>
-              <option value="Computer Science and Business Systems"></option>
-              <option value="Master of Business Administration"></option>
-              <option value="Master of Computer Applications"></option>
-              <option value="Diploma in Computer Engineering"></option>
-              <option value="Diploma in Electronics and Communication Engineering"></option>
-              <option value="Diploma in Mechanical Engineering"></option>
-              <option value="Diploma in Civil Engineering"></option>
-              <option value="Other"></option>
             </datalist>
 
             <div class="rounded-3xl border border-slate-200/70 bg-white/45 p-4 dark:border-slate-700/70 dark:bg-slate-900/35 md:col-span-2">
@@ -532,52 +509,6 @@
       closeAssistant: document.getElementById("closeAssistant")
     };
 
-    const branchMap = {
-      CSE: "Computer Science and Engineering",
-      CSC: "Computer Science and Engineering",
-      CSM: "Computer Science and Engineering (AI & ML)",
-      CSM1: "Computer Science and Engineering (AI & ML)",
-      CSD: "Computer Science and Engineering (Data Science)",
-      CSB: "Computer Science and Business Systems",
-      CSBS: "Computer Science and Business Systems",
-      CSI: "Computer Science and Engineering (IoT)",
-      CSO: "Computer Science and Engineering (IoT)",
-      CSG: "Computer Science and Engineering (Cyber Security)",
-      CYB: "Computer Science and Engineering (Cyber Security)",
-      IT: "Information Technology",
-      ECE: "Electronics and Communication Engineering",
-      EEE: "Electrical and Electronics Engineering",
-      EIE: "Electronics and Instrumentation Engineering",
-      MEC: "Mechanical Engineering",
-      ME: "Mechanical Engineering",
-      CIV: "Civil Engineering",
-      CE: "Civil Engineering",
-      CHE: "Chemical Engineering",
-      CH: "Chemical Engineering",
-      BME: "Biomedical Engineering",
-      BIO: "Biotechnology",
-      BT: "Biotechnology",
-      AGR: "Agricultural Engineering",
-      AE: "Aeronautical Engineering",
-      AUTO: "Automobile Engineering",
-      MIN: "Mining Engineering",
-      PE: "Petroleum Engineering",
-      RBT: "Robotics and Automation",
-      MECA: "Mechatronics Engineering",
-      AIM: "Artificial Intelligence and Machine Learning",
-      AIDS: "Artificial Intelligence and Data Science",
-      MBA: "Master of Business Administration",
-      MCA: "Master of Computer Applications",
-      A1: "Civil Engineering",
-      A2: "Electrical and Electronics Engineering",
-      A3: "Mechanical Engineering",
-      A4: "Electronics and Communication Engineering",
-      A5: "Computer Science and Engineering",
-      C5: "Artificial Intelligence and Machine Learning",
-      D4: "Data Science",
-      D5: "Artificial Intelligence and Data Science"
-    };
-
     const state = {
       authFlowInProgress: false
     };
@@ -723,18 +654,12 @@
 
     function detectBranchFromHallTicket() {
       const raw = normalizeHallTicket(elements.hallTicket.value);
-      const branchToken = Object.keys(branchMap).find(code => raw.includes(code));
       const isValid = /^[A-Z0-9]{8,15}$/.test(raw);
 
       elements.hallTicket.value = raw;
-      if (branchToken) {
-        elements.branch.value = branchMap[branchToken];
-        elements.branchHint.textContent = `Detected branch from token "${branchToken}" in the hall ticket number.`;
-      } else if (isValid) {
-        elements.branchHint.textContent = "Hall ticket looks valid, but branch could not be detected automatically. Please confirm manually.";
-      } else {
-        elements.branchHint.textContent = "Enter your hall ticket number to auto-detect branch details.";
-      }
+      elements.branchHint.textContent = isValid
+        ? "Hall ticket looks valid. Select your branch manually below."
+        : "Enter your hall ticket number (8–15 alphanumeric characters).";
 
       elements.hallTicketBadge.textContent = isValid ? "Valid format" : "Check format";
       elements.hallTicketBadge.className = isValid

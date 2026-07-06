@@ -16,7 +16,7 @@ const THEME_KEY = "theme";
 const SETTINGS_DOC_ID = "dashboard";
 const SEMESTER_KEYS = ["1-1", "1-2", "2-1", "2-2", "3-1", "3-2", "4-1", "4-2"];
 const GRADE_POINTS = { S: 10, A: 9, B: 8, C: 7, D: 6, E: 5, F: 0, Ab: 0 };
-const REGULATION_OPTIONS = ["R23", "R20"];
+const REGULATION_OPTIONS = ["R23"];
 
 const defaultState = {
   profile: {
