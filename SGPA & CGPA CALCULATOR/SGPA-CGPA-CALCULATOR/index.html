@@ -375,6 +375,15 @@
             </div>
 
             <div class="floating-group">
+              <select class="floating-select" id="admissionType">
+                <option value=""></option>
+                <option value="Regular">Regular</option>
+                <option value="Lateral Entry (LE)">Lateral Entry (LE)</option>
+              </select>
+              <label class="floating-label" for="admissionType">Admission Type</label>
+            </div>
+
+            <div class="floating-group">
               <input class="floating-input" id="password" type="password" placeholder="Password" />
               <label class="floating-label" for="password">Password</label>
             </div>
@@ -500,6 +509,7 @@
       hallTicketBadge: document.getElementById("hallTicketBadge"),
       regulation: document.getElementById("regulation"),
       joiningYear: document.getElementById("joiningYear"),
+      admissionType: document.getElementById("admissionType"),
       phone: document.getElementById("phone"),
       fullName: document.getElementById("fullName"),
       signupAvatar: document.getElementById("signupAvatar"),
@@ -679,7 +689,7 @@
 
     function validateForm() {
       const data = getSignupData();
-      if (!data.name || !data.email || !data.password || !data.confirmPassword || !data.hallTicket || !data.branch || !data.regulation || !data.joiningYear || !data.phone) {
+      if (!data.name || !data.email || !data.password || !data.confirmPassword || !data.hallTicket || !data.branch || !data.regulation || !data.joiningYear || !data.admissionType || !data.phone) {
         return "Please fill in all required fields.";
       }
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
@@ -716,6 +726,7 @@
         branch: elements.branch.value.trim(),
         regulation: elements.regulation.value,
         joiningYear: elements.joiningYear.value,
+        admissionType: elements.admissionType.value,
         phone: elements.phone.value.trim()
       };
     }
@@ -767,6 +778,7 @@
             hallTicket: data.hallTicket,
             branch: data.branch,
             regulation: data.regulation,
+            admissionType: data.admissionType,
             joiningYear: data.joiningYear,
             phone: formatPhone(data.phone)
           }

@@ -12,6 +12,28 @@ import {
 
 // ── Grade points R23 ────────────────────────────────────────────
 export const GRADE_POINTS = { S:10, A:9, B:8, C:7, D:6, E:5, F:0, Ab:0 };
+export const ADMISSION_TYPE_OPTIONS = ["Regular", "Lateral Entry (LE)"];
+
+export function normalizeAdmissionType(value, fallback = "Regular") {
+  const candidate = String(value || "").trim();
+  if (candidate === "Lateral Entry (LE)" || candidate === "Lateral Entry" || candidate === "LE") {
+    return "Lateral Entry (LE)";
+  }
+  if (candidate === "Regular" || candidate.toUpperCase() === "REGULAR") {
+    return "Regular";
+  }
+  return fallback;
+}
+
+export function isLateralEntryProfile(profile) {
+  return normalizeAdmissionType(profile?.admissionType, "Regular") === "Lateral Entry (LE)";
+}
+
+export function getVisibleSemesterKeys(profile) {
+  return isLateralEntryProfile(profile)
+    ? ["2-1", "2-2", "3-1", "3-2", "4-1", "4-2"]
+    : ["1-1", "1-2", "2-1", "2-2", "3-1", "3-2", "4-1", "4-2"];
+}
 
 export function gradePerformance(sgpa) {
   const v = parseFloat(sgpa);
@@ -185,12 +207,22 @@ export function setActiveNav() {
 }
 
 // ── CGPA computation ────────────────────────────────────────────
-export function computeCurrentCGPA(semesters) {
-  if (!semesters || semesters.length === 0) {
+export function computeCurrentCGPA(semesters, profile) {
+  const records = Array.isArray(semesters) ? semesters : [];
+  const filtered = records.filter(semester => {
+    if (!semester || !semester.sem) return false;
+    if (isLateralEntryProfile(profile)) {
+      const semNumber = Number(String(semester.sem).split("-")[0]);
+      return semNumber >= 3;
+    }
+    return true;
+  });
+
+  if (!filtered || filtered.length === 0) {
     return { cgpa: 0, weightedSum: 0, totalCredits: 0 };
   }
-  const weightedSum = semesters.reduce((sum, s) => sum + s.sgpa * s.credits, 0);
-  const totalCredits = semesters.reduce((sum, s) => sum + s.credits, 0);
+  const weightedSum = filtered.reduce((sum, s) => sum + s.sgpa * s.credits, 0);
+  const totalCredits = filtered.reduce((sum, s) => sum + s.credits, 0);
   const cgpa = totalCredits > 0 ? weightedSum / totalCredits : 0;
   return { cgpa, weightedSum, totalCredits };
 }

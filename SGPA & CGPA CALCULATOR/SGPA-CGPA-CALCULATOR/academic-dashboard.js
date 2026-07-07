@@ -7,7 +7,10 @@
   getUserSetting,
   saveUserSetting,
   saveUserProfile,
-  updateUserProfile
+  updateUserProfile,
+  normalizeAdmissionType,
+  isLateralEntryProfile,
+  getVisibleSemesterKeys
 } from "./app.js";
 import { mountProfilePanel } from "./profile-panel.js";
 import { CURRICULUM, BRANCH_OPTIONS, normalizeBranchCode } from "./curriculum-data.js";
@@ -16,6 +19,10 @@ const THEME_KEY = "theme";
 const SETTINGS_DOC_ID = "dashboard";
 const SEMESTER_KEYS = ["1-1", "1-2", "2-1", "2-2", "3-1", "3-2", "4-1", "4-2"];
 const GRADE_POINTS = { S: 10, A: 9, B: 8, C: 7, D: 6, E: 5, F: 0, Ab: 0 };
+
+function getVisibleSemesterKeysForProfile(profile = currentState.profile) {
+  return getVisibleSemesterKeys(profile);
+}
 const REGULATION_OPTIONS = ["R23"];
 
 const defaultState = {
@@ -24,6 +31,7 @@ const defaultState = {
     hallTicket: "Not set",
     branch: "Department",
     regulation: "R23",
+    admissionType: "Regular",
     email: "",
     joiningYear: "",
     phone: "",
@@ -515,11 +523,15 @@ function renderSemesterPage(state) {
   updateProfileSummaryStats(summary);
   initSyllabusControls();
 
-  host.innerHTML = SEMESTER_KEYS.map(key => {
+  const visibleSemesterKeys = getVisibleSemesterKeysForProfile(state.profile);
+
+  host.innerHTML = visibleSemesterKeys.map(key => {
     const semester = state.semesters[key] || emptySemester();
+    const hasSubjects = Array.isArray(semester.subjects) && semester.subjects.length > 0;
+    const isOpen = semester.isOpen === true || (hasSubjects && semester.isOpen !== false);
 
     return `
-      <article class="semester-card glass-panel${semester.isOpen ? " is-open" : ""}" data-semester="${key}">
+      <article class="semester-card glass-panel${isOpen ? " is-open" : ""}" data-semester="${key}">
         <button class="semester-card__toggle" type="button" data-toggle-semester="${key}">
           <div class="semester-card__head">
             <div class="semester-card__title">
@@ -560,6 +572,14 @@ function renderSemesterPage(state) {
   host.querySelectorAll("[data-toggle-semester]").forEach(button => {
     button.addEventListener("click", () => toggleSemesterCard(button.dataset.toggleSemester));
   });
+
+  visibleSemesterKeys.forEach(key => {
+    const semester = state.semesters[key] || emptySemester();
+    if (semester.subjects?.length) {
+      const card = host.querySelector(`[data-semester="${key}"]`);
+      if (card) card.classList.add("is-open");
+    }
+  });
   host.querySelectorAll("[data-add-row]").forEach(button => {
     button.addEventListener("click", () => addSemesterRow(button.dataset.addRow));
   });
@@ -576,12 +596,12 @@ function updateProfileSummaryStats(summary) {
 }
 
 function renderSubjectRows(subjects, semKey) {
-  const rows = subjects.length ? subjects : [{ name: "", credits: "", grade: "" }];
+  const normalizedSubjects = Array.isArray(subjects) ? subjects : [];
+  const rows = normalizedSubjects.length ? normalizedSubjects : [{ name: "", credits: "", grade: "" }];
   return rows.map((subject, index) => `
     <div class="subject-row" data-subject-index="${index}">
       <input type="text" placeholder="Subject name" value="${escapeHtml(subject.name || "")}" />
-      <input type="number" min="0" step="0.5" placeholder="Credits" value="${escapeHtml(String(subject.credits || ""))}" />
-      <select>
+      <input type="number" min="0" step="0.5" placeholder="Credits" value="${escapeHtml(String(subject.credits ?? ""))}" />
         ${["", "S", "A", "B", "C", "D", "E", "F", "Ab"].map(grade => `<option value="${grade}"${subject.grade === grade ? " selected" : ""}>${grade || "Grade"}</option>`).join("")}
       </select>
       ${semKey ? `<button class="subject-edit-btn" type="button" data-edit-subject="${semKey}" data-edit-index="${index}" title="Edit subject" aria-label="Edit ${escapeHtml(subject.name || "subject")}">
@@ -718,6 +738,7 @@ function buildSemesterExportData() {
       studentName: profile.name || "Student",
       hallTicket: profile.hallTicket || "Not set",
       collegeName: profile.collegeName || "College Name Not Available",
+      admissionType: profile.admissionType || "Regular",
       totalCredits,
       passedSubjects,
       appearedSubjects: subjects.length,
@@ -936,7 +957,7 @@ function buildSingleSemesterPdf(data) {
   var detailRows = [
     ["Student Name", data.studentName || "Student", "Hall Ticket No.", data.hallTicket || "Not set"],
     ["Branch", data.branch || "CSE", "Regulation", data.regulation || "R23"],
-    ["College", data.collegeName || "Not set", "Semester", "Semester " + data.semesterKey]
+    ["Admission Type", data.admissionType || "Regular", "Semester", "Semester " + data.semesterKey]
   ];
 
   detailRows.forEach(function(row) {
@@ -1176,6 +1197,15 @@ async function saveProfileChanges(draft) {
   if (!currentUser) return;
 
   const normalizedRegulation = getCurrentRegulation();
+  const previousAdmissionType = currentState.profile.admissionType || "Regular";
+  const nextAdmissionType = normalizeAdmissionType(draft.admissionType, "Regular");
+  const hasExistingSemesterData = Object.values(currentState.semesters || {}).some(semester => Array.isArray(semester?.subjects) && semester.subjects.some(subject => String(subject?.name || "").trim() || Number(subject?.credits) || subject?.grade));
+
+  if (previousAdmissionType !== nextAdmissionType && hasExistingSemesterData && !window.confirm("Changing the admission type changes which semesters are shown. Your existing semester data will be preserved. Continue?")) {
+    profileStatusMessage = "Profile update cancelled.";
+    return false;
+  }
+
   const updatedProfile = {
     ...currentState.profile,
     name: draft.fullName?.trim() || currentState.profile.name,
@@ -1183,6 +1213,7 @@ async function saveProfileChanges(draft) {
     hallTicket: draft.hallTicket || currentState.profile.hallTicket,
     branch: draft.branch?.trim() || "",
     regulation: normalizedRegulation,
+    admissionType: nextAdmissionType,
     joiningYear: draft.joiningYear?.trim() || "",
     phone: draft.phone?.trim() || "",
     collegeName: draft.collegeName?.trim() || "",
@@ -1219,6 +1250,7 @@ async function saveProfileChanges(draft) {
 }
 
 function renderInstantCalculator() {
+  const visibleSemesterKeys = getVisibleSemesterKeysForProfile(currentState.profile);
   const host = document.getElementById("instantRows");
   if (!host) return;
 
@@ -1235,7 +1267,10 @@ function renderInstantCalculator() {
   }
 
   if (semesterSelect) {
-    semesterSelect.innerHTML = SEMESTER_KEYS.map(key => `<option value="${key}">Semester ${key}</option>`).join("");
+    semesterSelect.innerHTML = visibleSemesterKeys.map(key => `<option value="${key}">Semester ${key}</option>`).join("");
+    if (!visibleSemesterKeys.includes(currentState.instantCalculator.semester)) {
+      currentState.instantCalculator.semester = visibleSemesterKeys[0] || "3-1";
+    }
     semesterSelect.value = currentState.instantCalculator.semester;
   }
 
@@ -1369,7 +1404,8 @@ function updateInstantSummary(calculatorState, forceValidation = false) {
 }
 
 function computeSummary(state) {
-  const savedSemesters = SEMESTER_KEYS
+  const visibleSemesterKeys = getVisibleSemesterKeysForProfile(state.profile);
+  const savedSemesters = visibleSemesterKeys
     .filter(key => state.semesters[key]?.subjects?.length)
     .map(key => ({ key, ...state.semesters[key] }));
 
@@ -1486,6 +1522,7 @@ function applyInstantSyllabus() {
 }
 
 function initSyllabusControls() {
+  const visibleSemesterKeys = getVisibleSemesterKeysForProfile(currentState.profile);
   const regulationSelect = document.getElementById("syllabusRegulationSelect");
   const branchSelect = document.getElementById("syllabusBranchSelect");
   const semesterSelect = document.getElementById("syllabusSemesterSelect");
@@ -1505,7 +1542,7 @@ function initSyllabusControls() {
   const regulation = getCurrentRegulation();
   regulationSelect.innerHTML = `<option value="${regulation}">${regulation}</option>`;
   branchSelect.innerHTML = BRANCH_OPTIONS.map(option => `<option value="${option.code}">${option.code} - ${option.label}</option>`).join("");
-  semesterSelect.innerHTML = [`<option value="">Select semester</option>`, ...SEMESTER_KEYS.map(key => `<option value="${key}">Semester ${key}</option>`)].join("");
+  semesterSelect.innerHTML = [`<option value="">Select semester</option>`, ...visibleSemesterKeys.map(key => `<option value="${key}">Semester ${key}</option>`)].join("");
 
   regulationSelect.value = regulation;
   regulationSelect.disabled = true;
@@ -1525,6 +1562,11 @@ function syncSyllabusStatus() {
   const statusNode = document.getElementById("syllabusStatus");
   if (!statusNode) return;
   syncLoadSubjectsButton(Boolean(semester) && syllabusLoadArmed);
+
+  if (!visibleSemesterKeys.includes(semester)) {
+    if (statusNode) statusNode.textContent = "This semester is not available for your current admission type.";
+    return;
+  }
 
   const subjects = CURRICULUM[regulation]?.[branch]?.[semester];
   if (!branch || !semester) {
@@ -1546,6 +1588,11 @@ function applySelectedSyllabus() {
   const branch = document.getElementById("syllabusBranchSelect")?.value || "";
   const semester = document.getElementById("syllabusSemesterSelect")?.value || "";
   const statusNode = document.getElementById("syllabusStatus");
+  const visibleSemesterKeys = getVisibleSemesterKeysForProfile(currentState.profile);
+  if (!visibleSemesterKeys.includes(semester)) {
+    if (statusNode) statusNode.textContent = "This semester is not available for your current admission type.";
+    return;
+  }
   const subjects = CURRICULUM[regulation]?.[branch]?.[semester];
 
   if (!subjects?.length) {
@@ -1660,12 +1707,14 @@ function hasIncompleteProfile(profile, user) {
 function normalizeProfileData(profile, user, baseProfile = defaultState.profile) {
   const fallbackName = user.displayName || user.email?.split("@")[0] || "Student";
   const regulation = normalizeRegulation(profile?.regulation, baseProfile.regulation || "R23");
+  const admissionType = normalizeAdmissionType(profile?.admissionType || profile?.admission_type, baseProfile.admissionType || "Regular");
   return {
     ...baseProfile,
     name: profile?.name || fallbackName,
     hallTicket: profile?.hallTicket || profile?.roll || "Not set",
     branch: profile?.branch || "Department",
     regulation,
+    admissionType,
     email: profile?.email || user.email || "",
     joiningYear: profile?.joiningYear ? String(profile.joiningYear) : "",
     phone: profile?.phone || "",
@@ -1684,6 +1733,8 @@ async function backfillProfile(profile) {
     roll: profile.hallTicket,
     branch: profile.branch,
     regulation: profile.regulation,
+    admissionType: profile.admissionType,
+    admissionType: profile.admissionType,
     joiningYear: profile.joiningYear,
     phone: profile.phone,
     collegeName: profile.collegeName,
@@ -1908,6 +1959,7 @@ async function exportAllSemestersPdf() {
     infoRow("Hall Ticket Number", profile.hallTicket || "Not set", col2x, y + 8);
     infoRow("Branch", profile.branch || branch, col1x, y + 22);
     infoRow("Regulation", regulation, col2x, y + 22);
+    infoRow("Admission Type", profile.admissionType || "Regular", col1x, y + 34);
 
     y += 44;
 

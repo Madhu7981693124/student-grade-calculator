@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useState } from "https://esm.sh/react@18.3.1
 import { createRoot } from "https://esm.sh/react-dom@18.3.1/client";
 import htm from "https://esm.sh/htm@3.1.1";
 
+const ADMISSION_TYPE_OPTIONS = ["Regular", "Lateral Entry (LE)"];
+
 const html = htm.bind(React.createElement);
 
 const EMPTY_PROFILE = {
@@ -10,6 +12,7 @@ const EMPTY_PROFILE = {
   hallTicket: "",
   branch: "",
   regulation: "",
+  admissionType: "Regular",
   joiningYear: "",
   phone: "",
   collegeName: "",
@@ -25,6 +28,7 @@ const FIELD_CONFIG = [
   { key: "hallTicket", label: "Hall Ticket Number", type: "text", required: false, placeholder: "Hall ticket number", readOnly: true },
   { key: "branch", label: "Branch", type: "text", required: true, placeholder: "Enter your branch" },
   { key: "regulation", label: "Regulation", type: "select", required: true, options: REGULATION_OPTIONS, readOnly: true },
+  { key: "admissionType", label: "Admission Type", type: "select", required: true, options: ["", ...ADMISSION_TYPE_OPTIONS] },
   { key: "joiningYear", label: "Year of Joining", type: "number", required: true, placeholder: "Ex: 2023" },
   { key: "phone", label: "Phone Number", type: "tel", required: true, placeholder: "Enter your phone number" },
   { key: "collegeName", label: "College Name", type: "text", required: false, placeholder: "Enter your college name" },
@@ -36,7 +40,7 @@ const FIELD_GROUPS = [
   {
     title: "Identity",
     description: "Your academic identity and regulation details.",
-    fields: ["fullName", "hallTicket", "branch", "regulation"]
+    fields: ["fullName", "hallTicket", "branch", "regulation", "admissionType"]
   },
   {
     title: "Contact",
@@ -62,6 +66,9 @@ function normalizeProfile(rawProfile) {
     hallTicket: profile.hallTicket || profile.roll || "",
     branch: profile.branch || "",
     regulation,
+    admissionType: profile.admissionType === "Lateral Entry (LE)" || profile.admissionType === "Lateral Entry" || profile.admissionType === "LE"
+      ? "Lateral Entry (LE)"
+      : "Regular",
     joiningYear: profile.joiningYear ? String(profile.joiningYear) : "",
     phone: profile.phone || "",
     collegeName: profile.collegeName || "",
@@ -71,7 +78,7 @@ function normalizeProfile(rawProfile) {
 }
 
 function profileCompletion(profile) {
-  const keys = ["fullName", "email", "hallTicket", "branch", "regulation", "joiningYear", "phone", "collegeName", "gender", "dob"];
+  const keys = ["fullName", "email", "hallTicket", "branch", "regulation", "admissionType", "joiningYear", "phone", "collegeName", "gender", "dob"];
   const complete = keys.filter(key => String(profile[key] || "").trim()).length;
   return Math.round((complete / keys.length) * 100);
 }
@@ -84,6 +91,10 @@ function validateProfile(profile) {
   if (!profile.regulation.trim()) errors.regulation = "Regulation is required.";
   if (profile.regulation.trim() && !REGULATION_OPTIONS.includes(profile.regulation.trim().toUpperCase())) {
     errors.regulation = "Only R23 and R20 are supported.";
+  }
+
+  if (!profile.admissionType.trim()) {
+    errors.admissionType = "Admission type is required.";
   }
 
   if (!profile.joiningYear.trim()) {
