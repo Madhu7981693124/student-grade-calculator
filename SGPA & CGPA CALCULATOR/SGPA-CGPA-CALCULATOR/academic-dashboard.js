@@ -10,7 +10,8 @@
   updateUserProfile,
   normalizeAdmissionType,
   isLateralEntryProfile,
-  getVisibleSemesterKeys
+  getVisibleSemesterKeys,
+  getAcademicYearRange
 } from "./app.js";
 import { mountProfilePanel } from "./profile-panel.js";
 import { CURRICULUM, BRANCH_OPTIONS, normalizeBranchCode } from "./curriculum-data.js";
@@ -1556,11 +1557,23 @@ function initSyllabusControls() {
     semesterSelect.addEventListener("change", () => {
       syllabusLoadArmed = Boolean(semesterSelect.value);
       syncSyllabusStatus();
-      if (isLateralEntryProfile(currentState.profile) && semesterSelect.value) {
-        applySelectedSyllabus();
-      }
     });
-    applyButton.addEventListener("click", applySelectedSyllabus);
+    applyButton.addEventListener("click", () => {
+      const semester = semesterSelect.value;
+      if (!semester) return;
+
+      if (currentState.semesters[semester]?.subjects?.length) {
+        syllabusLoadArmed = false;
+        syncLoadSubjectsButton(false);
+        const statusNode = document.getElementById("syllabusStatus");
+        if (statusNode) {
+          statusNode.textContent = `Semester ${semester} already has loaded subjects.`;
+        }
+        return;
+      }
+
+      applySelectedSyllabus();
+    });
     syllabusControlsReady = true;
   }
 
@@ -1587,7 +1600,8 @@ function syncSyllabusStatus() {
   const statusNode = document.getElementById("syllabusStatus");
   const visibleSemesterKeys = getVisibleSemesterKeysForProfile(currentState.profile);
   if (!statusNode) return;
-  syncLoadSubjectsButton(Boolean(semester) && syllabusLoadArmed);
+  const hasLoadedSubjects = Boolean(currentState.semesters[semester]?.subjects?.length);
+  syncLoadSubjectsButton(Boolean(semester) && syllabusLoadArmed && !hasLoadedSubjects);
 
   if (!visibleSemesterKeys.includes(semester)) {
     if (statusNode) statusNode.textContent = "This semester is not available for your current admission type.";
@@ -1622,6 +1636,13 @@ function applySelectedSyllabus() {
   }
   const sourceSemester = getSyllabusSourceSemester(semester, currentState.profile);
   const subjects = CURRICULUM[regulation]?.[branch]?.[sourceSemester];
+
+  if (currentState.semesters[semester]?.subjects?.length) {
+    syllabusLoadArmed = false;
+    syncLoadSubjectsButton(false);
+    if (statusNode) statusNode.textContent = `Semester ${semester} already has loaded subjects.`;
+    return;
+  }
 
   if (!subjects?.length) {
     if (statusNode) statusNode.textContent = `No syllabus data is available for ${branch} ${semester} under ${regulation} yet.`;
@@ -1997,9 +2018,9 @@ async function exportAllSemestersPdf() {
     pdf.setTextColor(30, 64, 175);
     pdf.setFont("helvetica", "bold");
     pdf.setFontSize(8);
-    const joiningYear = profile.joiningYear ? Number(profile.joiningYear) : null;
-    const academicYearStr = joiningYear
-      ? `Academic Year: ${joiningYear} – ${joiningYear + 4}`
+    const academicYearRange = getAcademicYearRange(profile);
+    const academicYearStr = academicYearRange
+      ? `Academic Duration: ${academicYearRange.durationYears} Years | Academic Year: ${academicYearRange.label}`
       : "Academic Year: —";
     text(academicYearStr, pageW / 2, y + 5.5, { align: "center" });
     y += 12;

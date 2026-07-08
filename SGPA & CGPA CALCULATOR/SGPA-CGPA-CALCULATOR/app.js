@@ -29,6 +29,21 @@ export function isLateralEntryProfile(profile) {
   return normalizeAdmissionType(profile?.admissionType, "Regular") === "Lateral Entry (LE)";
 }
 
+export function getAcademicYearRange(profile) {
+  const joiningYear = Number(String(profile?.joiningYear || "").trim());
+  if (!Number.isInteger(joiningYear)) return null;
+
+  const durationYears = isLateralEntryProfile(profile) ? 3 : 4;
+  const completionYear = joiningYear + durationYears;
+
+  return {
+    joiningYear,
+    durationYears,
+    completionYear,
+    label: `${joiningYear} - ${completionYear}`
+  };
+}
+
 export function getVisibleSemesterKeys(profile) {
   return isLateralEntryProfile(profile)
     ? ["2-1", "2-2", "3-1", "3-2", "4-1", "4-2"]
@@ -212,8 +227,8 @@ export function computeCurrentCGPA(semesters, profile) {
   const filtered = records.filter(semester => {
     if (!semester || !semester.sem) return false;
     if (isLateralEntryProfile(profile)) {
-      const semNumber = Number(String(semester.sem).split("-")[0]);
-      return semNumber >= 3;
+      const semKey = String(semester.sem).trim().replace(/^Semester\s+/i, "");
+      return ["2-1", "2-2", "3-1", "3-2", "4-1", "4-2"].includes(semKey);
     }
     return true;
   });

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "https://esm.sh/react@18.3.1";
 import { createRoot } from "https://esm.sh/react-dom@18.3.1/client";
 import htm from "https://esm.sh/htm@3.1.1";
+import { getAcademicYearRange } from "./app.js";
 
 const ADMISSION_TYPE_OPTIONS = ["Regular", "Lateral Entry (LE)"];
 
@@ -314,6 +315,7 @@ function ProfilePanel(props) {
   const completion = useMemo(() => profileCompletion(draft), [draft]);
   const avatar = avatarLetter(draft.fullName);
   const badgeClass = badgeTone(completion);
+  const academicYearRange = getAcademicYearRange(draft);
   const summaryCards = [
     {
       label: "Current CGPA",
@@ -336,7 +338,7 @@ function ProfilePanel(props) {
     {
       label: "Profile Score",
       value: `${completion}%`,
-      meta: "Completion of your academic profile",
+      meta: `Admission Type: ${draft.admissionType || "Regular"}${academicYearRange ? ` • Academic Year: ${academicYearRange.label}` : ""}`,
       accent: "from-indigo-500/20 to-violet-500/10"
     }
   ];
