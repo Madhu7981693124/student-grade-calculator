@@ -23,6 +23,23 @@ const GRADE_POINTS = { S: 10, A: 9, B: 8, C: 7, D: 6, E: 5, F: 0, Ab: 0 };
 function getVisibleSemesterKeysForProfile(profile = currentState.profile) {
   return getVisibleSemesterKeys(profile);
 }
+
+function getSyllabusSourceSemester(semesterKey, profile = currentState.profile) {
+  if (!semesterKey) return "";
+  if (!isLateralEntryProfile(profile)) return semesterKey;
+
+  const leSemesterMap = {
+    "2-1": "2-1",
+    "2-2": "2-2",
+    "3-1": "3-1",
+    "3-2": "3-2",
+    "4-1": "4-1",
+    "4-2": "4-2"
+  };
+
+  return leSemesterMap[semesterKey] || semesterKey;
+}
+
 const REGULATION_OPTIONS = ["R23"];
 
 const defaultState = {
@@ -602,7 +619,9 @@ function renderSubjectRows(subjects, semKey) {
     <div class="subject-row" data-subject-index="${index}">
       <input type="text" placeholder="Subject name" value="${escapeHtml(subject.name || "")}" />
       <input type="number" min="0" step="0.5" placeholder="Credits" value="${escapeHtml(String(subject.credits ?? ""))}" />
-        ${["", "S", "A", "B", "C", "D", "E", "F", "Ab"].map(grade => `<option value="${grade}"${subject.grade === grade ? " selected" : ""}>${grade || "Grade"}</option>`).join("")}
+      <select>
+        <option value="">Grade</option>
+        ${["S", "A", "B", "C", "D", "E", "F", "Ab"].map(grade => `<option value="${grade}"${subject.grade === grade ? " selected" : ""}>${grade}</option>`).join("")}
       </select>
       ${semKey ? `<button class="subject-edit-btn" type="button" data-edit-subject="${semKey}" data-edit-index="${index}" title="Edit subject" aria-label="Edit ${escapeHtml(subject.name || "subject")}">
         <i class="fa-solid fa-pen-to-square"></i>
@@ -655,6 +674,9 @@ function toggleSemesterCard(key) {
   if (!currentState.semesters[key]) currentState.semesters[key] = emptySemester();
   currentState.semesters[key].isOpen = shouldOpen;
   syncSelectedSemester(key, shouldOpen);
+  if (shouldOpen && isLateralEntryProfile(currentState.profile)) {
+    applySelectedSyllabus();
+  }
 }
 
 async function saveSemester(key) {
@@ -1534,6 +1556,9 @@ function initSyllabusControls() {
     semesterSelect.addEventListener("change", () => {
       syllabusLoadArmed = Boolean(semesterSelect.value);
       syncSyllabusStatus();
+      if (isLateralEntryProfile(currentState.profile) && semesterSelect.value) {
+        applySelectedSyllabus();
+      }
     });
     applyButton.addEventListener("click", applySelectedSyllabus);
     syllabusControlsReady = true;
@@ -1560,6 +1585,7 @@ function syncSyllabusStatus() {
   const branch = document.getElementById("syllabusBranchSelect")?.value || "";
   const semester = document.getElementById("syllabusSemesterSelect")?.value || "";
   const statusNode = document.getElementById("syllabusStatus");
+  const visibleSemesterKeys = getVisibleSemesterKeysForProfile(currentState.profile);
   if (!statusNode) return;
   syncLoadSubjectsButton(Boolean(semester) && syllabusLoadArmed);
 
@@ -1568,7 +1594,8 @@ function syncSyllabusStatus() {
     return;
   }
 
-  const subjects = CURRICULUM[regulation]?.[branch]?.[semester];
+  const sourceSemester = getSyllabusSourceSemester(semester, currentState.profile);
+  const subjects = CURRICULUM[regulation]?.[branch]?.[sourceSemester];
   if (!branch || !semester) {
     statusNode.textContent = "Select or click a semester card to enable subject loading.";
     return;
@@ -1593,7 +1620,8 @@ function applySelectedSyllabus() {
     if (statusNode) statusNode.textContent = "This semester is not available for your current admission type.";
     return;
   }
-  const subjects = CURRICULUM[regulation]?.[branch]?.[semester];
+  const sourceSemester = getSyllabusSourceSemester(semester, currentState.profile);
+  const subjects = CURRICULUM[regulation]?.[branch]?.[sourceSemester];
 
   if (!subjects?.length) {
     if (statusNode) statusNode.textContent = `No syllabus data is available for ${branch} ${semester} under ${regulation} yet.`;
